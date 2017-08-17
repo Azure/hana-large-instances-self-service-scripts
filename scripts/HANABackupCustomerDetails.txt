@@ -1,0 +1,14 @@
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+#
+# Version: 2.0
+# Date 08/11/2017
+# Provided by Microsoft Service Management
+Storage Backup Name:
+Storage IP Address:
+#Node IP addresses, instance numbers, and HANA backup name
+#provided by customer.  HANA backup name created using
+#hdbuserstore utility.
+Node 1 IP Address:
+Node 1 HANA instance number:
+Node 1 HANA Backup Name:
