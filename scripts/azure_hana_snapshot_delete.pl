@@ -5,7 +5,7 @@
 # 
 # Specifications subject to change without notice.
 #
-# Name: azure_hana_backup.pl
+# Name: azure_hana_snapshot_delete.pl
 # Version: 2.0
 # Date 08/11/2017
 
