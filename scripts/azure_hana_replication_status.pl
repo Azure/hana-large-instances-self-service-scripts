@@ -6,8 +6,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_replication_status.pl
-# Version: 2.0
-# Date 08/11/2017
+# Version: 2.1
+# Date 09/27/2017
 
 use strict;
 use warnings;

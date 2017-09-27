@@ -7,8 +7,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_backup.pl
-# Version: 2.0
-# Date 08/11/2017
+#Version: 2.1
+#Date 9/27/2017
 
 use strict;
 use warnings;
@@ -52,6 +52,7 @@ use Time::HiRes;
 # $strHANAAdmin 			- The username on the HANA instance created with HANA backup credentials, typically SCADMINXX where XX is HANA instance number.
 # $strHDBSQLPath			- Customer path to where application hdbsql exists
 # $strHANAInstance 		- The HANA instance that requires snapshots to be created.  It looks for matching patterns in the volumes of the SVM that are RW
+my $version = "2.1";
 my @arrOutputLines;
 my @fileLines;
 my @strSnapSplit;
@@ -88,16 +89,25 @@ my $sshCmd = '/usr/bin/ssh';
 my $verbose = 1;
 my $strBackupType = $ARGV[0];
 my $strHANAInstance = $ARGV[1];
+my $strHANASID = uc $strHANAInstance;
 my $strSnapshotPrefix = $ARGV[2];
 my $hanaSnapshotSuccess = qq('Storage snapshot successful');
-my $strHANAStatusCmd = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "\s"';
-my $strHANACreateCmd = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data create snapshot"';
+my $strHANAStatusCmdV1 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "\s"';
+my $strHANAStatusCmdV2 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -d SYSTEMDB -U '.$strHANAAdmin.' "\s"';
+my $strHANACreateCmdV1 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data create snapshot"';
+my $strHANACreateCmdV2 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -d SYSTEMDB -U '.$strHANAAdmin.' "backup data for full system create snapshot"';
 #my $strHANACreateCmd = "";
 #my $strHANADeleteCmd = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data drop snapshot"';
 my $strHANAIDRequestString = "select BACKUP_ID from M_BACKUP_CATALOG where ENTRY_TYPE_NAME = 'data snapshot' and STATE_NAME = 'prepared'";
-my $strHANABackupIDRequest = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin .' "'. $strHANAIDRequestString.'"' ;
+my $strHANABackupIDRequestV1 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin .' "'. $strHANAIDRequestString.'"' ;
+my $strHANABackupIDRequestV2 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -d SYSTEMDB -U ' . $strHANAAdmin .' "'. $strHANAIDRequestString.'"' ;
+
 my $strHANACloseCmdSuccess;
-my $strHANACloseCmdNoSuccess = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data close snapshot backup_id '.$strHANABackupID . ' UNSUCCESSFUL "DO NOT USE - Storage Snapshot Unsuccessful!" "'   ;
+my $strHANACloseCmdV1;
+my $strHANACloseCmdV2;
+my $strHANAVersion;
+
+#my $strHANACloseCmdNoSuccess = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data close snapshot backup_id '.$strHANABackupID . ' UNSUCCESSFUL "DO NOT USE - Storage Snapshot Unsuccessful!" "'   ;
 #my $strHANADeleteCmd = "";
 
 my $arrSnapshot = "";
@@ -195,30 +205,84 @@ sub runSSHCmd
 }
 
 
-sub runCheckHANAStatus
+#
+# Name: runCheckHANAVersion()
+# Func: Checks version of HANA to determine which type of hdbsql commands to use
+#
+sub runCheckHANAVersion
 {
 
+  opendir my $handle,  '/hana/shared/'.$strHANASID.'/exe/linuxx86_64/';
+  foreach (readdir $handle) {
 
-  			logMsg($LOG_INFO, "**********************Creating HANA status**********************");
-  			# Create a HANA database snapshot via HDBuserstore, key snapper
-  			my @out = runShellCmd( $strHANAStatusCmd );
-  			if ( $? ne 0 ) {
-  					logMsg( $LOG_WARN, "HANA check status command '" . $strHANAStatusCmd . "' failed: $?" );
-            logMsg( $LOG_WARN, "Please check the following:");
-            logMsg( $LOG_WARN, "hdbuserstore user command was executed with root");
-            logMsg( $LOG_WARN, "Backup user account created in HANA Studio was made under SYSTEM");
-            logMsg( $LOG_WARN, "Backup user account and hdbuserstore user account are case-sensitive");
-            logMsg( $LOG_WARN, "The correct host name and port number are used");
-            logMsg( $LOG_WARN, "The port number in 3(01)15 corresponds to instance number of 01 when creating hdbuserstore user account");
-  					logMsg( $LOG_WARN, "******************Exiting Script*******************************" );
-  					exit;
-  				} else {
-  					logMsg( $LOG_INFO, "HANA status check successful." );
-  			}
-
+      if ($_ =~ m/HDB/) {
+        my @chars = split("", $_);
+        $strHANAVersion = $chars[4];
+      }
+  }
+  closedir $handle;
 
 }
 
+sub runCheckHANAStatus
+{
+			logMsg($LOG_INFO, "**********************Checking HANA status**********************");
+			# Create a HANA database username via HDBuserstore
+      if ($strHANAVersion eq 1) {
+        my @out = runShellCmd( $strHANAStatusCmdV1 );
+        logMsg($LOG_INFO, $strHANAStatusCmdV1);
+      }
+      if ($strHANAVersion eq 2) {
+        my @out = runShellCmd( $strHANAStatusCmdV2 );
+        logMsg($LOG_INFO, $strHANAStatusCmdV2);
+      }
+      if ( $? ne 0 ) {
+          if ($strHANAVersion eq 1) {
+              logMsg( $LOG_WARN, "HANA check status command '" . $strHANAStatusCmdV1 . "' failed: $?" );
+          }
+          if ($strHANAVersion eq 2) {
+              logMsg( $LOG_WARN, "HANA check status command '" . $strHANAStatusCmdV2 . "' failed: $?" );
+          }
+          logMsg( $LOG_WARN, "Please check the following:");
+          logMsg( $LOG_WARN, "hdbuserstore user command was executed with root");
+          logMsg( $LOG_WARN, "Backup user account created in HANA Studio was made under SYSTEM");
+          logMsg( $LOG_WARN, "Backup user account and hdbuserstore user account are case-sensitive");
+          logMsg( $LOG_WARN, "The correct host name and port number are used");
+          logMsg( $LOG_WARN, "Please check port number stored in hdbuserstore. HANA 1.0 should have port 3XX15 added while HANA 2.0 should have port 3XX13 where XX stands for the HANA Instance number.  ");
+					logMsg( $LOG_WARN, "******************Exiting Script*******************************" );
+					exit;
+				} else {
+					logMsg( $LOG_INFO, "HANA status check successful." );
+			}
+
+}
+
+sub runSetupVLIBackup() {
+
+#  if (-e '/osbackups') {
+#    logMsg($LOG_INFO,"/osbackups directory found");
+#    system("mount -o bind / /RootClone");
+#    system("mount -o bind /boot/efi /RootClone/boot/efi");
+
+#    if (-e '/RootClone') {
+#      system("rsync -aAHSv --numeric-ids --delete --exclude-from=/tmp/skiplist /RootClone/ /hana/backups/os/");
+#    }
+
+#    system("umount /RootClone/data1");
+#    system("umount /RootClone/boot/efi");
+#    system("umount /RootClone");
+
+
+
+
+ #else {
+
+# logMsg($LOG_WARN, "/osbackups directory not found. Exiting.");
+   exit;
+ #}
+
+#  }
+}
 #
 # Name: runGetVolumeLocations()
 # Func: Get the set of production volumes that match specified HANA instance.
@@ -229,7 +293,7 @@ sub runGetVolumeLocations
   if ($strBackupType eq "hana") {
      logMsg($LOG_INFO, "**********************Getting list of volumes that match HANA instance specified**********************");
 	   logMsg( $LOG_INFO, "Collecting set of volumes hosting HANA matching pattern *$strHANAInstance* ..." );
-	   $strSSHCmd = "volume show -volume *".$strHANAInstance."* -volume !*log_backups* -type RW -fields volume";
+	   $strSSHCmd = "volume show -volume *".$strHANAInstance."* -volume !*log_backups* -volume !*log* -type RW -fields volume";
   }
   if ($strBackupType eq "boot") {
      logMsg($LOG_INFO, "**********************Getting list of volumes of boot volumes**********************");
@@ -313,12 +377,22 @@ sub runCheckIfSnapshotExists
 sub runRotateSnapshots
 {
 logMsg($LOG_INFO, "**********************Rotating snapshot numbering to allow new snapshot**********************");
+my $rotateIndex;
 my $checkSnapshotResult = "";
 	# let's go through all the Filer and volume paths, rotating snapshots for each
 for my $i (0 .. $#snapshotLocations) {
 		# set up our loop counters
-		my $j = $numKeep;
-		my $k = $numKeep - 1;
+    my $aref = $snapshotLocations[$i];
+    my $arraySize = $#{$aref} +1 ;
+
+
+    if ($arraySize <= $numKeep) {
+        $rotateIndex = $arraySize;
+    } else {
+        $rotateIndex = $numKeep;
+    }
+    my $j = $rotateIndex;
+		my $k = $rotateIndex - 1;
 		# get the SVM and volume name(s)
 		my $volName = $snapshotLocations[$i][0];
 		my $checkSnapshotResult;
@@ -438,11 +512,18 @@ sub runRenameRecentSnapshot
 #
 sub runCreateHANASnapshot
 {
-	if ($strHANAInstance ne "boot") {
+	if ($strBackupType eq "hana") {
 
+      my $strHANACreateCmd;
 			logMsg($LOG_INFO, "**********************Creating HANA snapshot**********************");
 			# Create a HANA database snapshot via HDBuserstore, key snapper
-			logMsg( $LOG_INFO, "Creating the HANA snapshot with command: \"$strHANACreateCmd\" ..." );
+      if ($strHANAVersion eq 1) {
+        $strHANACreateCmd = $strHANACreateCmdV1;
+      }
+      if ($strHANAVersion eq 2) {
+        $strHANACreateCmd = $strHANACreateCmdV2;
+      }
+      logMsg( $LOG_INFO, "Creating the HANA snapshot with command: \"$strHANACreateCmd\" ..." );
 			my @out = runShellCmd( $strHANACreateCmd );
 			if ( $? ne 0 ) {
 					logMsg( $LOG_WARN, "HANA snapshot creation command '" . $strHANACreateCmd . "' failed: $?" );
@@ -460,12 +541,22 @@ sub runCreateHANASnapshot
 #
 sub runCheckHANASnapshotStatus
 {
-  if ($strHANAInstance ne "boot") {
 
+  my @out;
+  if ($strBackupType eq "hana") {
+      my $strRequest;
       logMsg($LOG_INFO, "**********************Checking for HANA snapshot and obtaining ID**********************");
       # Create a HANA database snapshot via HDBuserstore, key snapper
-      logMsg( $LOG_INFO, "Checking HANA snapshot status with command: \"$strHANABackupIDRequest\" ..." );
-      my @out = runShellCmd( $strHANABackupIDRequest );
+      if ($strHANAVersion eq 1) {
+        logMsg( $LOG_INFO, "Checking HANA snapshot status with command: \"$strHANABackupIDRequestV1\" ..." );
+        @out = runShellCmd( $strHANABackupIDRequestV1 );
+        $strRequest = $strHANABackupIDRequestV1;
+      }
+      if ($strHANAVersion eq 2) {
+        logMsg( $LOG_INFO, "Checking HANA snapshot status with command: \"$strHANABackupIDRequestV2\" ..." );
+        @out = runShellCmd( $strHANABackupIDRequestV2 );
+        $strRequest = $strHANABackupIDRequestV2;
+      }
       logMsg( $LOG_INFO, 'row 1'.$out[1] );
       $strHANABackupID = $out[1];
 #      my @strBackupSplit = split(/^/, $strHANABackupID);
@@ -474,7 +565,7 @@ sub runCheckHANASnapshotStatus
       $strHANABackupID =~ s/\r|\n//g;
       logMsg( $LOG_INFO, 'hanabackup id: '.$strHANABackupID);
       if ( $? ne 0 ) {
-          logMsg( $LOG_WARN, "HANA snapshot creation command '" . $strHANABackupIDRequest . "' failed: $?" );
+          logMsg( $LOG_WARN, "HANA snapshot creation command '" . $strRequest . "' failed: $?" );
           logMsg( $LOG_WARN, "******************Exiting Script*******************************" );
           exit;
         } else {
@@ -487,15 +578,22 @@ sub runCheckHANASnapshotStatus
 
 sub runHANACloseSnapshot
 {
-  if ($strHANAInstance ne "boot") {
-
+  if ($strBackupType eq "hana") {
+      my $strHANACloseCmd;
       logMsg($LOG_INFO, "**********************Closing HANA snapshot**********************");
       # Delete the HANA database snapshot
-      $strHANACloseCmdSuccess = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data close snapshot backup_id '. $strHANABackupID . ' SUCCESSFUL '.$hanaSnapshotSuccess.qq(");
-      logMsg( $LOG_INFO, "Deleting the HANA snapshot with command: \"$strHANACloseCmdSuccess\" ..." );
-      my @out = runShellCmd( $strHANACloseCmdSuccess );
+      if ($strHANAVersion eq 1) {
+        $strHANACloseCmdV1 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -U ' . $strHANAAdmin . ' "backup data close snapshot backup_id '. $strHANABackupID . ' SUCCESSFUL '.$hanaSnapshotSuccess.qq(");
+        $strHANACloseCmd = $strHANACloseCmdV1;
+      }
+      if ($strHANAVersion eq 2) {
+        $strHANACloseCmdV2 = './hdbsql -n '.$strHANANodeIP.' -i '.$strHANANumInstance.' -d SYSTEMDB -U ' . $strHANAAdmin . ' "backup data for full system close snapshot backup_id '. $strHANABackupID . ' SUCCESSFUL '.$hanaSnapshotSuccess.qq(");
+        $strHANACloseCmd = $strHANACloseCmdV2;
+      }
+      logMsg( $LOG_INFO, "Deleting the HANA snapshot with command: \"$strHANACloseCmd\" ..." );
+      my @out = runShellCmd( $strHANACloseCmd );
       if ( $? ne 0 ) {
-          logMsg( $LOG_WARN, "HANA snapshot deletion command '" . $strHANACloseCmdSuccess . "' failed: $?" );
+          logMsg( $LOG_WARN, "HANA snapshot deletion command '" . $strHANACloseCmd . "' failed: $?" );
       } else {
           logMsg( $LOG_INFO, "HANA snapshot closed successfully." );
       }
@@ -523,7 +621,7 @@ logMsg($LOG_INFO, "**********************Creating Storage snapshot**************
     if ($strBackupType eq "hana") {
       $strSSHCmd = "volume snapshot create -volume $snapshotLocations[$i][0] -snapshot $strSnapshotPrefix\.$date\.recent -snapmirror-label $strSnapshotPrefix -comment $strHANABackupID" ;
     }
-    if ($strBackupType eq "boot" or $strBackupType eq "logs") {
+    if ($strBackupType eq "li" or $strBackupType eq "logs" or $strBackupType eq "vli") {
       $strSSHCmd = "volume snapshot create -volume $snapshotLocations[$i][0] -snapshot $strSnapshotPrefix\.$date\.recent -snapmirror-label $strSnapshotPrefix" ;
     }
     my @out = runSSHCmd( $strSSHCmd );
@@ -574,10 +672,8 @@ logMsg($LOG_INFO, "**********************Adding list of snapshots to volume list
 
 sub runClearSnapshotLocations
 {
-logMsg($LOG_INFO, "**********************Clearing snapshot list**********************");
-		for my $i (1 .. $#snapshotLocations) {
-				splice($snapshotLocations[$i], 1, $#{$snapshotLocations[$i]});
-		}
+  logMsg($LOG_INFO, "**********************Clearing snapshot list**********************");
+  undef @snapshotLocations;
 }
 
 sub displayArray
@@ -608,7 +704,7 @@ sub runRemoveOlderSnapshots
 			my $volName = $snapshotLocations[$i][0];
 			my $checkSnapshotResult;
 			# iterate through all the snapshots
-			logMsg( $LOG_INFO, "Deleting older snapshots named $strSnapshotPrefix.$j on $snapshotLocations[$i][0] ..." );
+			logMsg( $LOG_INFO, "Rotating older snapshots named $strSnapshotPrefix.$j on $snapshotLocations[$i][0] ..." );
 
 			while ( $j >= $numKeep ) {
 
@@ -681,6 +777,8 @@ sub runPrintFile
 }
 
 ##### --------------------- MAIN CODE --------------------- #####
+logMsg($LOG_INFO,"Executing Azure HANA Backup, Version $version");
+
 if ($strSnapshotPrefix eq "" or $numKeep eq "" or $strHANAInstance eq "" and $strBackupType ne "boot") {
 	logMsg( $LOG_WARN, "Please enter arguments as azure_hana_backup.pl <Backup Type> <HANA_Instance> <frequency_of_snapshot> <number_of_snapshots>." );
 	exit;
@@ -695,7 +793,14 @@ if ($strSnapshotPrefix eq "" or $numKeep eq "" or $strHANAInstance eq "" and $st
 
 #Before executing the rest of the script, all HANA nodes must be accessible for scale-out
 if ($strBackupType eq "hana") {
+  runCheckHANAVersion();
   runCheckHANAStatus();
+
+}
+
+if ($strBackupType eq "vli") {
+  runSetupVLIBackup();
+
 }
 
 # get volume(s) to take a snapshot of
