@@ -1,14 +1,92 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-#
-# Version: 2.0
-# Date 08/11/2017
-# Provided by Microsoft Service Management
-Storage Backup Name:
-Storage IP Address:
-#Node IP addresses, instance numbers, and HANA backup name
-#provided by customer.  HANA backup name created using
-#hdbuserstore utility.
-Node 1 IP Address:
-Node 1 HANA instance number:
-Node 1 HANA Backup Name:
+HANA Server Name: 
+HANA Server IP Address: 
+
+######***SID #1 Information***#####
+SID1: h01
+###Provided by Microsoft Operations###
+SID1 Storage Backup Name: 
+SID1 Storage IP Address: 
+######     Customer Provided    ######
+SID1 HANA instance number: 
+SID1 HANA HDBuserstore Name: 
+
+######***SID #2 Information***#####
+SID2: h02
+###Provided by Microsoft Operations###
+SID2 Storage Backup Name: 
+SID2 Storage IP Address: 
+######     Customer Provided    ######
+SID2 HANA instance number: 
+SID2 HANA HDBuserstore Name: 
+
+######***SID #3 Information***#####
+SID3: h03
+###Provided by Microsoft Operations###
+SID2 Storage Backup Name: 
+SID2 Storage IP Address: 
+######     Customer Provided    ######
+SID2 HANA instance number: 
+SID2 HANA HDBuserstore Name: 
+
+######***SID #4 Information***#####
+SID4:
+###Provided by Microsoft Operations###
+SID4 Storage Backup Name:
+SID4 Storage IP Address:
+######     Customer Provided    ######
+SID4 HANA instance number:
+SID4 HANA HDBuserstore Name:
+
+######***SID #5 Information***#####
+SID5:
+###Provided by Microsoft Operations###
+SID5 Storage Backup Name:
+SID5 Storage IP Address:
+######     Customer Provided    ######
+SID5 HANA instance number:
+SID5 HANA HDBuserstore Name:
+
+######***SID #6 Information***#####
+SID6:
+###Provided by Microsoft Operations###
+SID6 Storage Backup Name:
+SID6 Storage IP Address:
+######     Customer Provided    ######
+SID6 HANA instance number:
+SID6 HANA HDBuserstore Name:
+
+######***SID #7 Information***#####
+SID7:
+###Provided by Microsoft Operations###
+SID7 Storage Backup Name:
+SID7 Storage IP Address:
+######     Customer Provided    ######
+SID7 HANA instance number:
+SID7 HANA HDBuserstore Name:
+
+######***SID #8 Information***#####
+SID8:
+###Provided by Microsoft Operations###
+SID8 Storage Backup Name:
+SID8 Storage IP Address:
+######     Customer Provided    ######
+SID8 HANA instance number:
+SID8 HANA HDBuserstore Name:
+
+######***SID #9 Information***#####
+SID9:
+###Provided by Microsoft Operations###
+SID9 Storage Backup Name:
+SID9 Storage IP Address:
+######     Customer Provided    ######
+SID9 HANA instance number:
+SID9 HANA HDBuserstore Name:
+
+######***SID #10 Information***#####
+SID10:
+###Provided by Microsoft Operations###
+SID10 Storage Backup Name:
+SID10 Storage IP Address:
+######     Customer Provided    ######
+SID10 HANA instance number:
+SID10 HANA HDBuserstore Name:
