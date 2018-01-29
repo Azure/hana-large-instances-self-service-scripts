@@ -3,7 +3,7 @@
 # Copyright (C) 2017 Accenture, Inc. All rights reserved.
 # Specifications subject to change without notice.
 #
-# Name: testHANAConnection.pl
+# Name: removeTestStorageSnapshot.pl
 #Version: 3.0
 #Date 01/27/2018
 
@@ -12,7 +12,7 @@ use warnings;
 use Time::Piece;
 use Date::Parse;
 use Term::ANSIColor;
-#Usage:  This script is used to test a customer's connection to the HANA database to ensure it is working correctly before attemping to run the script.
+#Usage:  This script is used to remove the test snapshot that was performed while testing the connection to SAP HANA.
 #
 my $numSID = 9;
 my $detailsStart = 13;
