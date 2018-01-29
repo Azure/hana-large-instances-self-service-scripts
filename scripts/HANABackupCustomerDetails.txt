@@ -1,8 +1,18 @@
+The following document is for all customers using the Azure HANA Backup and Recovery scripts.
+Please fill in all necessary fields for each SID you wish to backup or recover. You may also comment
+out fields that you do not wish to backup for a period of time by adding a # in front of a required field.
+You also do not need to enter all SIDs that are contained on a particular server if there is no
+need to backup or recover that particular SID. The format below must be kept for all fields otherwise all
+scripts will present an error message and the script will terminate.  You may however delete additional required
+fields of any SID Information Details you will not be using after the last usable SID.  All fields must
+either be filled in, commented out, or deleted. 
+
+
 HANA Server Name: 
 HANA Server IP Address: 
 
 ######***SID #1 Information***#####
-SID1: h01
+SID1: 
 ###Provided by Microsoft Operations###
 SID1 Storage Backup Name: 
 SID1 Storage IP Address: 
@@ -11,7 +21,7 @@ SID1 HANA instance number:
 SID1 HANA HDBuserstore Name: 
 
 ######***SID #2 Information***#####
-SID2: h02
+SID2: 
 ###Provided by Microsoft Operations###
 SID2 Storage Backup Name: 
 SID2 Storage IP Address: 
@@ -20,7 +30,7 @@ SID2 HANA instance number:
 SID2 HANA HDBuserstore Name: 
 
 ######***SID #3 Information***#####
-SID3: h03
+SID3: 
 ###Provided by Microsoft Operations###
 SID2 Storage Backup Name: 
 SID2 Storage IP Address: 
