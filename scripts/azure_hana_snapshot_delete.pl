@@ -6,8 +6,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_snapshot_delete.pl
-# Version: 2.0
-# Date 08/11/2017
+# Version: 3.0
+# Date 01/27/2018
 
 use strict;
 use warnings;
