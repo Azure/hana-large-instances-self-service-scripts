@@ -6,35 +6,16 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_snapshot_delete.pl
-# Version: 2.1
-# Date 09/27/2017
+# Version: 3.0
+# Date 01/27/2018
 
 use strict;
 use warnings;
 use Time::Piece;
 use Date::Parse;
 
-#Usage:  This script is used to allow Azure HANA customers to create on-demand backups of their various HANA volumes.  The variable $numkeep describes the number of backup related snapshots that are created within
-#		protected volumes. The backup is created through the snapshot process within NetApp.  This snapshot is created by calling the customer's Storage Virtual Machine and executing a snapshot.  The snapshot is given
-#		a snapmirror-label of customer. The snapshot is then replicated to a backup folder using SnapVault.  SnapVault will have its own retention schedule that is kept independent of this script.
-#
-# Steps to configure the cluster:
-#
-# 1) Create a role with the following commands -- change vserver and role name to fit preferences:
-#    security login role create -role hanabackup -cmddirname "volume snapshot rename" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot create" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot show" -vserver $strSVM ---> maybe duplicate
-#    security login role create -role hanabackup -cmddirname "volume snapshot delete" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot list" -vserver $strSVM   ---> deprecated?
-#    security login role create -role hanabackup -cmddirname "volume snapshot modify" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume show" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "set" -vserver $strSVM
-# 2) Create a new user with the role and specifying ssh and publickey access:
-#    security login create -user-or-group-name $strUser -role hanabackup -authmethod publickey -application ssh -vserver $strSVM
-# 3) Create a new public key based on 'ssh-keygen' output (id_rsa.pub):
-#    security login publickey create -username $strUser -vserver $strSVM -publickey "ssh-rsa AAAA<rest of key>"
-#
-#
+#Usage:  This script is used to allow Azure HANA customers to delete on-demand backups that were taken with the script azure_hana_backup.pl.
+
 
 
 #

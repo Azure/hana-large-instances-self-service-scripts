@@ -34,30 +34,33 @@ or trademarks, whether by implication, estoppel or otherwise.
 
 ## azure_hana_backup.pl
 
-The Azure HANA backup script has been updated slightly.
-1.	A pause has been introduced on the most chatty of ssh logins
-2.	All different backup scripts have been integrated into a single script. They are now called as follows:
+The Azure HANA backup script has been updated to accomodate MCOS scenarios where multiple SAP HANA instances are running on the same HANA Large Instances. Changes are:
+1.	All HANA instances will be snapshot backed up together
+2.	The HANA SID does not have to be specified anymore. They are now called as follows:
 
 ### Usage
 
-**HANA Backup**
+```
+HANA backup covering /hana/data and /hana/shared (includes/usr/sap)
+./azure_hana_backup.pl hana <snapshot_prefix> <snapshot_frequency> <number of snapshots retained>
+
+For /hana/logbackups snapshot
+./azure_hana_backup.pl logs <snapshot_prefix> <snapshot_frequency> <number of snapshots retained>
+
+For snapshot of the volume storing the boot LUN
+./azure_hana_backup.pl boot <HANA Large Instance Type> <snapshot_prefix> <snapshot_frequency> <number of snapshots retained>
 
 ```
-SAPTSTHDB100:/scripts # ./azure_hana_backup.pl hana hm3 daily 30
-```
 
-**OS Backup**
+You need to specify the following parameters: 
 
-Note the use of none for the HANA instance
+- The first parameter characterizes the type of the snapshot backup. The values allowed are **hana**, **logs**, and **boot**. 
+- The parameter **<HANA Large Instance Type>** is necessary for boot volume backups only. There are two valid values with "TypeI" or "TypeII" dependent on the HANA Large Instance Unit. To find out what "Type" your unit is, read this [documentation](https://docs.microsoft.com/azure/virtual-machines/workloads/sap/hana-overview-architecture).  
+- The parameter **<snapshot_prefix>** is a snapshot or backup label for the type of snapshot. It has two purposes. The one purpose for you is to give it a name, so that you know what these snapshots are about. The second purpose is for the script azure\_hana\_backup.pl to determine the number of storage snapshots that are retained under that specific label. If you schedule two storage snapshot backups of the same type (like **hana**), with two different labels, and define that 30 snapshots should be kept for each, you are going to end up with 60 storage snapshots of the volumes affected. 
+- The parameter **<snapshot_frequency>** is reserved for future developments and does not have any impact. We recommend setting it right now to "3min" when executing backups of the type log and "15min", when executing the other backup types
+- The parameter **<number of snapshots retained>** defines the retention of the snapshots indirectly, by defining the number of snapshots of with the same snapshot prefix (label) to be kept. This parameter is important for a scheduled execution through cron. If the number of snapshots with the same snapshot_prefix would exceed the number given by this parameter, the oldest snapshot is going to be deleted before executing a new storage snapshot.
 
-```
-SAPTSTHDB100:/scripts # ./azure_hana_backup.pl boot none daily 30
-```
-
-**Log Backup**
-```
-SAPTSTHDB100:/scripts # ./azure_hana_backup.pl logs hm3 daily 30
-```
+In the case of a scale-out, the script does some additional checking to ensure that you can access all the HANA servers. The script also checks that all HANA instances return the appropriate status of the instances before it creates an SAP HANA snapshot. The SAP HANA snapshot is followed by a storage snapshot.
 
 ## azure_hana_replication_status.pl
 
@@ -68,10 +71,9 @@ This script is run from the disaster recovery location so an active server is re
 The script is executed by:
 
 ```
-SAPTSTHDB100:/scripts # ./azure_hana_replication_status.pl hm3
+SAPTSTHDB100:/scripts # ./azure_hana_replication_status.pl
 ```
 
-HM3 is the example is the HANA instance we wish to receive information about.
 It uses the same HANABackupCustomerDetails.txt to obtain the necessary information to log in to the storage as appropriate.
 Once executed, it prints all found relationships with HANA Instance HM3 as part of the volume name:
 
@@ -235,10 +237,10 @@ This script is run to delete the temp snapshot that is created in each volume af
 The script is run as follows with the HANA instance to be test entered as an argument:
 
 ```
-SAPTSTHDB100:/scripts # ./removeTestStorageSnapshot.pl hm3
+SAPTSTHDB100:/scripts # ./removeTestStorageSnapshot.pl
 ```
 
-HM3 is the HANA instance that is being used in this example.  Like the test Storage Snapshot Connection script, the script will initiate a test login to the storage using the credentials provided in the HANABackupCustomerDetails.txt document. If successful, the following will be shown:
+Like the test Storage Snapshot Connection script, the script will initiate a test login to the storage using the credentials provided in the HANABackupCustomerDetails.txt document. If successful, the following will be shown:
 
 ```
 **********************Checking access to Storage**********************
@@ -284,10 +286,10 @@ This script has two purposes. First, to ensure that the server used for scripts 
 The script is run as follows with the HANA instance to be test entered as an argument:
 
 ```
-SAPTSTHDB100:/scripts # ./testStorageSnapshotConnection.pl hm3
+SAPTSTHDB100:/scripts # ./testStorageSnapshotConnection.pl
 ```
 
-HM3 is the HANA instance that is being tested in this example.  Next, the script initiates a test login to the storage using the credentials provided in the HANABackupCustomerDetails.txt document. If successful, the following is shown:
+Next, the script initiates a test login to the storage using the credentials provided in the HANABackupCustomerDetails.txt document. If successful, the following is shown:
 
 ```
 **********************Checking access to Storage**********************
@@ -337,3 +339,7 @@ Snapshot created successfully.
 Taking snapshot testStorage.recent for hana_shared_hm3_t020_vol ...
 Snapshot created successfully.
 ```
+
+## azure_hana_replication_status.pl
+
+This script provides the basic details around the replication status from the production site to the disaster-recovery site. The script monitors to ensure that the replication is taking place, and it shows the size of the items that are being replicated. It also provides guidance if a replication is taking too long or if the link is down.

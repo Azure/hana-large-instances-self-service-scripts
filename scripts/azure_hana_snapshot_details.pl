@@ -1,42 +1,34 @@
 #!/usr/bin/perl -w
 #
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-# 
+# Copyright (C) 2017 Microsoft, Inc. All rights reserved.
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_snapshot_details.pl
-# Version: 2.1
-# Date 09/27/2017
+#Version: 3.0
+#Date 01/27/2018
 
 use strict;
 use warnings;
 use Time::Piece;
 use Date::Parse;
 use Time::HiRes;
+use Term::ANSIColor;
+#Usage:  This script provides details on all storage snapshots that currently exist within a customer's environment.
 
-#Usage:  This script is used to allow Azure HANA customers to create on-demand backups of their various HANA volumes.  The variable $numkeep describes the number of backup related snapshots that are created within
-#		protected volumes. The backup is created through the snapshot process within NetApp.  This snapshot is created by calling the customer's Storage Virtual Machine and executing a snapshot.  The snapshot is given
-#		a snapmirror-label of customer. The snapshot is then replicated to a backup folder using SnapVault.  SnapVault will have its own retention schedule that is kept independent of this script.
-#
-# Steps to configure the cluster:
-#
-# 1) Create a role with the following commands -- change vserver and role name to fit preferences:
-#    security login role create -role hanabackup -cmddirname "volume snapshot rename" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot create" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot show" -vserver $strSVM ---> maybe duplicate
-#    security login role create -role hanabackup -cmddirname "volume snapshot delete" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot list" -vserver $strSVM   ---> deprecated?
-#    security login role create -role hanabackup -cmddirname "volume snapshot modify" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume show" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "set" -vserver $strSVM
-# 2) Create a new user with the role and specifying ssh and publickey access:
-#    security login create -user-or-group-name $strUser -role hanabackup -authmethod publickey -application ssh -vserver $strSVM
-# 3) Create a new public key based on 'ssh-keygen' output (id_rsa.pub):
-#    security login publickey create -username $strUser -vserver $strSVM -publickey "ssh-rsa AAAA<rest of key>"
-#
-#
+#number of allowable SIDs. Number entered is one less than actual.. i.e if allowing 4 SIDs, then 3 is entered
+my $numSID = 9;
+my $detailsStart = 13;
+# Error return codes -- 0 is success, non-zero is a failure of some type
+my $ERR_NONE=0;
+my $ERR_WARN=1;
 
+# Log levels -- LOG_INFO, LOG_WARN.  Bitmap values
+my $LOG_INFO=1;
+my $LOG_WARN=2;
+
+# Global parameters
+my $exitWarn = 0;
+my $exitCode;
 
 #
 # Global Tunables
@@ -55,56 +47,346 @@ use Time::HiRes;
 my @arrOutputLines;
 my @fileLines;
 my @strSnapSplit;
-my @customerDetails;
+my @arrCustomerDetails;
 my $strHANABackupID;
 my $strExternalBackupID;
-#my $filename = "/usr/sap/".$strHANAInstance."/HDB".$strHANAInstanceNumber."/exe/HANABackupCustomerDetails.txt";
+my $strHANAServerName;
+my $strHANAServerIPAddress;
+my $strHANAInstance;
 my $filename = "HANABackupCustomerDetails.txt";
 
 
+my $strUser;
+my $strSVM;
+
 #open the customer-based text file to gather required details
-open(my $fh, '<:encoding(UTF-8)', $filename)
-  or die "Could not open file '$filename' $!";
+sub runOpenParametersFiles {
+  open(my $fh, '<:encoding(UTF-8)', $filename)
+    or die "Could not open file '$filename' $!";
 
-chomp (@fileLines=<$fh>);
-close $fh;
+  chomp (@fileLines=<$fh>);
+  close $fh;
+}
+
+sub runVerifyParametersFile {
+
+  my $k = $detailsStart;
+  my $lineNum;
+  $lineNum = $k-3;
+  my $stringServerName = "HANA Server Name:";
+  if ($fileLines[$lineNum-1]) {
+    if (index($fileLines[$lineNum-1],$stringServerName) eq -1) {
+      logMsg($LOG_WARN, "Expected ".$stringServerName);
+      logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting");
+      exit;
+    }
+  }
 
 
-#get Microsoft Services Team Provided Variables
-@strSnapSplit = split(/: /, $fileLines[1]);
-my $strUser = $strSnapSplit[1];
-@strSnapSplit = split(/: /, $fileLines[2]);
-my $strSVM = $strSnapSplit[1];
+  $lineNum = $k-2;
+  my $stringHANAIPAddress = "HANA Server IP Address:";
+  if ($fileLines[$lineNum-1]) {
+    if (index($fileLines[$lineNum-1],$stringHANAIPAddress) eq -1) {
+      logMsg($LOG_WARN, "Expected ".$stringHANAIPAddress);
+      logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting");
+      exit;
+    }
+  }
 
 
 
+  for my $i (0 ... $numSID) {
 
+        my $j = $i*9;
+        $lineNum = $k+$j;
+        my $string1 = "######***SID #".($i+1)." Information***#####";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string1) eq -1) {
+            logMsg($LOG_WARN, "Expected ".$string1);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string2 = "SID".($i+1);
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string2) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string2);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string3 = "###Provided by Microsoft Operations###";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string3) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string3);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string4 = "SID".($i+1)." Storage Backup Name:";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string4) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string4);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string5 = "SID".($i+1)." Storage IP Address:";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string5) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string5);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string6 = "######     Customer Provided    ######";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string6) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string6);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string7 = "SID".($i+1)." HANA instance number:";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string7) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string7);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        my $string8 = "SID".($i+1)." HANA HDBuserstore Name:";
+        if ($fileLines[$lineNum-1]) {
+          if (index($fileLines[$lineNum-1],$string8) eq -1) {
+            logMsg($LOG_WARN, "Expected ". $string8);
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+          }
+        }
+        $j++;
+        $lineNum = $k+$j;
+        if ($#fileLines >= $lineNum-1 and $fileLines[$lineNum-1]) {
+          if ($fileLines[$lineNum-1] ne "") {
+            logMsg($LOG_WARN, "Expected Blank Line");
+            logMsg($LOG_WARN, "Verify line ".$lineNum." is correct. Exiting.");
+            exit;
+            }
+          }
+      }
+}
+
+sub runGetParameterDetails {
+
+  my $k = $detailsStart;
+  #HANA Server Name
+  my $lineNum;
+  $lineNum = $k-3;
+  if (substr($fileLines[$lineNum-1],0,1) ne "#") {
+    @strSnapSplit = split(/:/, $fileLines[$lineNum-1]);
+  } else {
+    logMsg($LOG_WARN,"Cannot skip HANA Server Name. It is a required field");
+    exit;
+  }
+  if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+    $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+    $strHANAServerName = $strSnapSplit[1];
+    logMsg($LOG_INFO,"HANA Server Name: ".$strHANAServerName);
+  }
+
+  undef @strSnapSplit;
+  #HANA SERVER IP Address
+  $lineNum = $k-2;
+  if (substr($fileLines[$lineNum-1],0,1) ne "#") {
+    @strSnapSplit = split(/:/, $fileLines[$lineNum-1]);
+  } else {
+    logMsg($LOG_WARN,"Cannot skip HANA Server IP Address. It is a required field");
+    exit;
+  }
+  if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+    $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+    $strHANAServerIPAddress = $strSnapSplit[1];
+    logMsg($LOG_INFO,"HANA Server IP Address: ".$strHANAServerIPAddress);
+  }
+
+  for my $i (0 .. $numSID) {
+
+    my $j = ($detailsStart+$i*9);
+    undef @strSnapSplit;
+
+    if (!$fileLines[$j]) {
+      next;
+    }
+
+    #SID
+    if (substr($fileLines[$j],0,1) ne "#") {
+      @strSnapSplit = split(/:/, $fileLines[$j]);
+    } else {
+      $arrCustomerDetails[$i][0] = "Skipped";
+      logMsg($LOG_INFO,"SID".($i+1).": ".$arrCustomerDetails[$i][0]);
+    }
+    if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+      $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+      $arrCustomerDetails[$i][0] = lc $strSnapSplit[1];
+      logMsg($LOG_INFO,"SID".($i+1).": ".$arrCustomerDetails[$i][0]);
+    } elsif (!$strSnapSplit[1] and !$arrCustomerDetails[$i][0]) {
+            $arrCustomerDetails[$i][0] = "Omitted";
+            logMsg($LOG_INFO,"SID".($i+1).": ".$arrCustomerDetails[$i][0]);
+
+    }
+
+    #Storage Backup Name
+    if (substr($fileLines[$j+2],0,1) ne "#") {
+    @strSnapSplit = split(/:/, $fileLines[$j+2]);
+    } else {
+      $arrCustomerDetails[$i][1] = "Skipped";
+      logMsg($LOG_INFO,"Storage Backup Name: ".$arrCustomerDetails[$i][1]);
+    }
+    if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+      $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+      $arrCustomerDetails[$i][1] = lc $strSnapSplit[1];
+      logMsg($LOG_INFO,"Storage Backup Name: ".$arrCustomerDetails[$i][1]);
+    } elsif (!$strSnapSplit[1] and !$arrCustomerDetails[$i][1]) {
+            $arrCustomerDetails[$i][1] = "Omitted";
+            logMsg($LOG_INFO,"Storage Backup Name: ".$arrCustomerDetails[$i][1]);
+
+    }
+
+    #Storage IP Address
+    if (substr($fileLines[$j+3],0,1) ne "#") {
+      @strSnapSplit = split(/:/, $fileLines[$j+3]);
+    } else {
+      $arrCustomerDetails[$i][2] = "Skipped";
+      logMsg($LOG_INFO,"Storage Backup Name: ".$arrCustomerDetails[$i][2]);
+    }
+    if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+      $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+      $arrCustomerDetails[$i][2] = $strSnapSplit[1];
+      logMsg($LOG_INFO,"Storage IP Address: ".$arrCustomerDetails[$i][2]);
+    } elsif (!$strSnapSplit[1] and !$arrCustomerDetails[$i][2]) {
+            $arrCustomerDetails[$i][2] = "Omitted";
+            logMsg($LOG_INFO,"Storage Backup Name: ".$arrCustomerDetails[$i][2]);
+
+    }
+
+    #HANA Instance Number
+    if (substr($fileLines[$j+5],0,1) ne "#") {
+      @strSnapSplit = split(/:/, $fileLines[$j+5]);
+    } else {
+      $arrCustomerDetails[$i][3] = "Skipped";
+      logMsg($LOG_INFO,"HANA Instance Number: ".$arrCustomerDetails[$i][3]);
+    }
+    if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+      $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+      $arrCustomerDetails[$i][3] = $strSnapSplit[1];
+      logMsg($LOG_INFO,"HANA Instance Number: ".$arrCustomerDetails[$i][3]);
+    } elsif (!$strSnapSplit[1] and !$arrCustomerDetails[$i][3]) {
+            $arrCustomerDetails[$i][3] = "Omitted";
+            logMsg($LOG_INFO,"HANA Instance Number: ".$arrCustomerDetails[$i][3]);
+
+    }
+
+    #HANA User name
+    if (substr($fileLines[$j+6],0,1) ne "#") {
+      @strSnapSplit = split(/:/, $fileLines[$j+6]);
+    } else {
+      $arrCustomerDetails[$i][4] = "Skipped";
+      logMsg($LOG_INFO,"HANA Instance Number: ".$arrCustomerDetails[$i][4]);
+    }
+    if ($strSnapSplit[1] and $strSnapSplit[1] !~ /^\s*$/) {
+      $strSnapSplit[1]  =~ s/^\s+|\s+$//g;
+      $arrCustomerDetails[$i][4] = uc $strSnapSplit[1];
+      logMsg($LOG_INFO,"HANA Userstore Name: ".$arrCustomerDetails[$i][4]);
+    } elsif (!$strSnapSplit[1] and !$arrCustomerDetails[$i][4]) {
+            $arrCustomerDetails[$i][4] = "Omitted";
+            logMsg($LOG_INFO,"HANA Instance Number: ".$arrCustomerDetails[$i][4]);
+
+    }
+  }
+}
+
+sub runVerifySIDDetails {
+
+
+NUMSID:    for my $i (0 ... $numSID) {
+      my $checkSID = 1;
+      my $checkBackupName = 1;
+      my $checkIPAddress = 1;
+      my $checkHANAInstanceNumber = 1;
+      my $checkHANAUserstoreName = 1;
+
+      for my $j (0 ... 4) {
+        if (!$arrCustomerDetails[$i][$j]) { last NUMSID; }
+      }
+
+      if ($arrCustomerDetails[$i][0] eq "Omitted") {
+          $checkSID = 0;
+      }
+      if ($arrCustomerDetails[$i][1] eq "Omitted") {
+          $checkBackupName = 0;
+      }
+      if ($arrCustomerDetails[$i][2] eq "Omitted") {
+          $checkIPAddress = 0;
+      }
+      if ($arrCustomerDetails[$i][3] eq "Omitted") {
+          $checkHANAInstanceNumber = 0;
+      }
+      if ($arrCustomerDetails[$i][4] eq "Omitted") {
+          $checkHANAUserstoreName = 0;
+      }
+
+      if ($checkSID eq 0 and $checkBackupName eq 0 and $checkIPAddress eq 0 and $checkHANAInstanceNumber eq 0 and $checkHANAUserstoreName eq 0) {
+        next;
+      } elsif ($checkSID eq 1 and $checkBackupName eq 1 and $checkIPAddress eq 1 and $checkHANAInstanceNumber eq 1 and $checkHANAUserstoreName eq 1) {
+        next;
+      } else {
+            if ($checkSID eq 0) {
+              logMsg($LOG_WARN,"Missing SID".($i+1)." Exiting.");
+            }
+            if ($checkBackupName eq 0) {
+              logMsg($LOG_WARN,"Missing Storage Backup Name for SID".($i+1)." Exiting.");
+            }
+            if ($checkIPAddress eq 0) {
+              logMsg($LOG_WARN,"Missing Storage IP Address for SID".($i+1)." Exiting.");
+            }
+            if ($checkHANAInstanceNumber eq 0) {
+              logMsg($LOG_WARN,"Missing HANA Instance User Name for SID".($i+1)." Exiting.");
+            }
+            if ($checkHANAUserstoreName eq 0) {
+              logMsg($LOG_WARN,"Missing HANA Userstore Name for SID".($i+1)." Exiting.");
+            }
+            exit;
+        }
+    }
+}
 
 #DO NOT MODIFY THESE VARIABLES!!!!
-my $numKeep = $ARGV[4];
+
 my $sshCmd = '/usr/bin/ssh';
 my $verbose = 1;
-my $strBackupType = $ARGV[0];
-my $strHANAInstance = $ARGV[1];
-my $strHANAInstanceNumber = $ARGV[2];
-my $strSnapshotPrefix = $ARGV[3];
+
 
 my $arrSnapshot = "";
 my $outputFilename = "";
 
-# Error return codes -- 0 is success, non-zero is a failure of some type
-my $ERR_NONE=0;
-my $ERR_WARN=1;
-
-# Log levels -- LOG_INFO, LOG_WARN.  Bitmap values
-my $LOG_INFO=1;
-my $LOG_WARN=2;
 
 # Global parameters
 my @snapshotLocations;
 my @volLocations;
-my $exitWarn = 0;
-my $exitCode;
+
 
 
 #
@@ -133,9 +415,10 @@ sub logMsg
 	if ( $errValue & $LOG_WARN ) {
 		$str .= "WARNING: $msgString\n";
 		$exitWarn = 1;
-		print $str;
-  push (@arrOutputLines, $str);
-  }
+    print color('bold red');
+    print $str;
+    print color('reset');
+	}
 }
 
 
@@ -154,7 +437,21 @@ sub runExit
 	# print the error code message (if verbose is selected)
 	if ( $verbose != 0 ) {
 		logMsg( $LOG_INFO, "Exiting with return code: $exitCode" );
-	}
+    if ($exitCode eq 0) {
+
+      print color ('bold green');
+      logMsg( $LOG_INFO, "Command completed successfully." );
+      print color ('reset');
+    }
+    if ($exitCode eq 1) {
+
+      print color ('bold red');
+      logMsg( $LOG_INFO, "Command failed. Please check screen output or created logs for errors." );
+      print color ('reset');
+    }
+
+
+  }
 
 	# exit with our error code
 	exit( $exitCode );
@@ -192,7 +489,7 @@ sub runGetVolumeLocations
 {
 
   logMsg($LOG_INFO, "**********************Getting list of all customer volumes**********************");
-  my $strSSHCmd = "volume show -type RW -fields volume";
+  my $strSSHCmd = "volume show -volume *".$strHANAInstance."* -type RW -fields volume";
   my @out = runSSHCmd( $strSSHCmd );
 	if ( $? ne 0 ) {
 		logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
@@ -230,7 +527,8 @@ logMsg($LOG_INFO, "**********************Adding list of snapshots to volume list
 		my $i = 0;
 
     foreach my $volName ( @volLocations ) {
-				my $j = 0;
+
+        my $j = 0;
 
 				my $strSSHCmd = "volume snapshot show -volume $volName -fields snapshot";
 				my @out = runSSHCmd( $strSSHCmd );
@@ -253,7 +551,6 @@ logMsg($LOG_INFO, "**********************Adding list of snapshots to volume list
 							}
 							my @strSubArr = split( /,/, $out[$k] );
 							my $strSub = $strSubArr[$#strSubArr-1];
-              logMsg($LOG_INFO,"Snapshot name:   $strSub");
               $snapshotLocations[$i][$j][0] = $strSub;
 				}
 				$i++;
@@ -286,10 +583,10 @@ sub runGetSnapshotDetailsBySnapshot
                 my $strSubSize = $strSubArr[$#strSubArr-3];
                 my $strSubHanaBackupID = $strSubArr[$#strSubArr-2];
                 my $strSubFrequency = $strSubArr[$#strSubArr-1];
-                logMsg($LOG_INFO,"create time: $strSubCreateTime");
-                logMsg($LOG_INFO,"size: $strSubSize");
-                logMsg($LOG_INFO,"HanaBackupID: $strSubHanaBackupID");
-                logMsg($LOG_INFO,"frequency: $strSubFrequency");
+                #logMsg($LOG_INFO,"create time: $strSubCreateTime");
+                #logMsg($LOG_INFO,"size: $strSubSize");
+                #logMsg($LOG_INFO,"HanaBackupID: $strSubHanaBackupID");
+                #logMsg($LOG_INFO,"frequency: $strSubFrequency");
 
 
                 $snapshotLocations[$x][$y][1] = $strSubCreateTime;
@@ -322,9 +619,11 @@ logMsg($LOG_INFO, "**********************Displaying Snapshot Details by Volume**
 
 
             for my $i (0 .. $#snapshotLocations) {
+              print color('bold blue');
               logMsg($LOG_INFO,"**********************************************************");
               logMsg($LOG_INFO,"****Volume: $snapshotLocations[$i][0][0]       ***********");
               logMsg($LOG_INFO,"**********************************************************");
+              print color('reset');
               my $strSSHCmd = "volume show -volume $snapshotLocations[$i][0][0] -fields size-used-by-snapshots";
       				my @out = runSSHCmd( $strSSHCmd );
               if ( $? ne 0 ) {
@@ -337,6 +636,7 @@ logMsg($LOG_INFO, "**********************Displaying Snapshot Details by Volume**
               logMsg($LOG_INFO,"Total Snapshot Size:  ".  $strVolTotalSnapshotSize);
               my $aref = $snapshotLocations[$i];
               for my $j (1 .. $#{$aref} ) {
+                      print color('bold green');
                       logMsg($LOG_INFO,"----------------------------------------------------------");
                       logMsg($LOG_INFO,"Snapshot:   $snapshotLocations[$i][$j][0]");
                       logMsg($LOG_INFO,"Create Time:   $snapshotLocations[$i][$j][1]");
@@ -345,6 +645,7 @@ logMsg($LOG_INFO, "**********************Displaying Snapshot Details by Volume**
                       if (defined $snapshotLocations[$i][$j][3]) {
                         logMsg($LOG_INFO,"HANA Backup ID:   $snapshotLocations[$i][$j][3]");
                       }
+                      print color('reset');
               }
             }
 }
@@ -368,17 +669,47 @@ sub runPrintFile
 }
 
 ##### --------------------- MAIN CODE --------------------- #####
-# get volume(s) to take a snapshot of
-runGetVolumeLocations();
+#read and store each line of HANABackupCustomerDetails to fileHandle
+runOpenParametersFiles();
 
-#get snapshots by volume and place into array
-runGetSnapshotsByVolume();
-displaySnapshotArray();
+#verify each line is expected based on template, otherwise throw error.
+runVerifyParametersFile();
 
-#get snapshot details for each snapshot found
-runGetSnapshotDetailsBySnapshot();
-displaySnapshotArrayDetails();
+#add Parameters to usable array customerDetails
+runGetParameterDetails();
 
+#verify all required details entered for each SID
+runVerifySIDDetails();
+
+for my $i (0 .. $numSID) {
+
+  if ($arrCustomerDetails[$i][0] and ($arrCustomerDetails[$i][0] ne "Skipped" and $arrCustomerDetails[$i][0] ne "Omitted")) {
+     $strHANAInstance = $arrCustomerDetails[$i][0];
+     print color('bold blue');
+     logMsg($LOG_INFO, "Checking Snapshot Status for $strHANAInstance");
+     print color('reset');
+     $strUser = $arrCustomerDetails[$i][1];
+     $strSVM = $arrCustomerDetails[$i][2];
+
+  } else {
+    logMsg($LOG_INFO, "No data entered for SID".($i+1)."  Skipping!!!");
+    next;
+  }
+  # get volume(s) to take a snapshot of
+  runGetVolumeLocations();
+
+  #get snapshots by volume and place into array
+  runGetSnapshotsByVolume();
+  displaySnapshotArray();
+
+  #get snapshot details for each snapshot found
+  runGetSnapshotDetailsBySnapshot();
+  displaySnapshotArrayDetails();
+
+  print color('bold green');
+  logMsg($LOG_INFO,"----------------------------------------------------------");
+  print color('reset');
+}
 # if we get this far, we can exit cleanly
 logMsg( $LOG_INFO, "Command completed successfully." );
 
