@@ -20,21 +20,6 @@ my $detailsStart = 13;
 #		protected volumes. The backup is created through the snapshot process within NetApp.  This snapshot is created by calling the customer's Storage Virtual Machine and executing a snapshot.  The snapshot is given
 #		a snapmirror-label of customer. The snapshot is then replicated to a backup folder using SnapVault.  SnapVault will have its own retention schedule that is kept independent of this script.
 #
-# Steps to configure the cluster:
-#
-# 1) Create a role with the following commands -- change vserver and role name to fit preferences:
-#    security login role create -role hanabackup -cmddirname "volume snapshot rename" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot create" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot show" -vserver $strSVM ---> maybe duplicate
-#    security login role create -role hanabackup -cmddirname "volume snapshot delete" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume snapshot list" -vserver $strSVM   ---> deprecated?
-#    security login role create -role hanabackup -cmddirname "volume snapshot modify" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "volume show" -vserver $strSVM
-#    security login role create -role hanabackup -cmddirname "set" -vserver $strSVM
-# 2) Create a new user with the role and specifying ssh and publickey access:
-#    security login create -user-or-group-name $strUser -role hanabackup -authmethod publickey -application ssh -vserver $strSVM
-# 3) Create a new public key based on 'ssh-keygen' output (id_rsa.pub):
-#    security login publickey create -username $strUser -vserver $strSVM -publickey "ssh-rsa AAAA<rest of key>"
 #
 #
 # Error return codes -- 0 is success, non-zero is a failure of some type

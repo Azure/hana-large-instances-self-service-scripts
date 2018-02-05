@@ -234,7 +234,7 @@ Note: The frequency is what is put as frequency by the customer in the snapshot 
 This script is run to delete the temp snapshot that is created in each volume after running the Test Storage Connection Script. A snapshot must exist in each volume for a HANA instance before the backup scripts are run otherwise the backup scripts will have errors. Eventually, the errors will go away if you run the script the same number of times the total number of volumes that make up that HANA instance. It is much cleaner as part of the testing to create a temporary snapshot.  This script removes that temporary snapshot after each backup script is executed once successfully.
 
 ### Usage
-The script is run as follows with the HANA instance to be test entered as an argument:
+The script is run as follows:
 
 ```
 SAPTSTHDB100:/scripts # ./removeTestStorageSnapshot.pl
@@ -283,7 +283,7 @@ It is okay if the temp snapshot cannot be found and does not necessarily mean an
 This script has two purposes. First, to ensure that the server used for scripts has access to the customer’s storage area before the customer runs the backup scripts. Second, to create a temp snapshot for the HANA instance the customer is testing.  This script should be run for every HANA instance on a server if multi-purpose to ensure that the backup scripts function as expected.
 
 ### Usage
-The script is run as follows with the HANA instance to be test entered as an argument:
+The script is run as follows:
 
 ```
 SAPTSTHDB100:/scripts # ./testStorageSnapshotConnection.pl
@@ -340,6 +340,25 @@ Taking snapshot testStorage.recent for hana_shared_hm3_t020_vol ...
 Snapshot created successfully.
 ```
 
-## azure_hana_replication_status.pl
+## azure_hana_dr_failover.pl
 
-This script provides the basic details around the replication status from the production site to the disaster-recovery site. The script monitors to ensure that the replication is taking place, and it shows the size of the items that are being replicated. It also provides guidance if a replication is taking too long or if the link is down.
+Script to initiate a DR failover into another region. The script needs to be executed on the HANA Large Instance unit in the DR region. Or the unit you want to fail over to. This script stops storage replication from the primary side to the secondary side, restores the latest snapshot on the DR volumes, and provides the mountpoints for the DR volumes.
+
+### Usage
+The script is run as follows executed on the HANA Large Instance in the DR site:
+
+```
+SAPTSTHDB100:/scripts # ./azure_hana_dr_failover.pl
+
+```
+
+
+## azure_hana_test_dr_failover.pl
+
+Script to perform a test failover into the DR site. Contrary to the azure_hana_dr_failover.pl script, this execution does not interrupt the storage replication from primary to secondary. Instead clones of the replicated storage volumes get created on the DR side and the mountpoints of the cloned volumes are provided. 
+
+### Usage
+The script is run as follows executed on the HANA Large Instance in the DR site:
+
+```
+SAPTSTHDB100:/scripts # ./azure_hana_test_dr_failover.pl
