@@ -31,11 +31,11 @@ SID2 HANA HDBuserstore Name:
 ######***SID #3 Information***#####
 SID3: 
 ###Provided by Microsoft Operations###
-SID2 Storage Backup Name: 
-SID2 Storage IP Address: 
+SID3 Storage Backup Name: 
+SID3 Storage IP Address: 
 ######     Customer Provided    ######
-SID2 HANA instance number: 
-SID2 HANA HDBuserstore Name: 
+SID3 HANA instance number: 
+SID3 HANA HDBuserstore Name: 
 
 ######***SID #4 Information***#####
 SID4:
