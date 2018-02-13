@@ -3,9 +3,9 @@
 # Copyright (C) 2017 Microsoft, Inc. All rights reserved.
 # Specifications subject to change without notice.
 #
-# Name: azure_hana_dr_failover.pl
-#Version: 3.0
-#Date 01/27/2018
+# Name: azure_hana_dr_failover.pl 
+# Version: 3.1 
+# Date 01/27/2018 
 
 use strict;
 use warnings;
@@ -504,7 +504,7 @@ sub runGetVolumeLocations
   print color('reset');
   logMsg( $LOG_INFO, "Collecting set of volumes hosting HANA matching pattern *$strHANAInstance* ..." );
 	#my $strSSHCmd = "volume show -volume *".$strHANAInstance."* -volume !*log_".$strHANAInstance."* -volume !*shared* -volume *dp* -volume !*clone* -fields volume";
-  my $strSSHCmd = "volume show -volume *".$strHANAInstance."* -volume !*clone* -fields volume,type";
+  my $strSSHCmd = "volume show -volume *".$strHANAInstance."* -volume !*clone* -type DP -volume !*log_".$strHANAInstance."* -volume !*shared* -fields volume,type";
   my @out = runSSHCmd( $strSSHCmd );
 	if ( $? ne 0 ) {
 		logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
@@ -522,11 +522,11 @@ sub runGetVolumeLocations
 		chop $out[$j];
 		my @arr = split( /,/, $out[$j] );
 
-			my $name = $arr[$#arr-1];
+			my $name = $arr[$#arr-2];
 			#logMsg( $LOG_INFO, $i."-".$name );
 			if (defined $name) {
 				logMsg( $LOG_INFO, "Adding volume $name to the snapshot list." );
-				push( , $name);
+				push( @volLocations, $name);
 
 			}
 	$i++;
@@ -590,7 +590,7 @@ print color('reset');
         if ((($volName !~ /data/ and $volName !~ /log_backups/) and $volName =~ /dp/) or $volName =~ /vol/)  {
           next;
         }
-        my $strSSHDiagCmd = "snapshot show -volume $volName -snapshot !*snapmirror* -sort-by create-time -snapmirror-label hourly|3min|15min -fields snapshot";
+        my $strSSHDiagCmd = "snapshot show -volume $volName -snapshot !*snapmirror* -sort-by create-time -snapmirror-label hourly|3min|15min|15 -fields snapshot";
         my @out = runSSHDiagCmd( $strSSHDiagCmd );
 				if ( $? ne 0 ) {
 						logMsg( $LOG_WARN, "Running '" . $strSSHDiagCmd . "' failed: $?" );
