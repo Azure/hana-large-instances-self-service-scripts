@@ -4,8 +4,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_backup.pl
-#Version: 3.0
-#Date 01/27/2018
+#Version: 3.1
+#Date 02/22/2018
 
 use strict;
 use warnings;
@@ -52,7 +52,7 @@ my $strBackupType = $ARGV[0];
 # $strHANAAdmin 			- The username on the HANA instance created with HANA backup credentials, typically SCADMINXX where XX is HANA instance number.
 # $strHDBSQLPath			- Customer path to where application hdbsql exists
 # $strHANAInstance 		- The HANA instance that requires snapshots to be created.  It looks for matching patterns in the volumes of the SVM that are RW
-my $version = "2.1";
+my $version = "3.0";
 my @arrOutputLines;
 my @fileLines;
 my @strSnapSplit;
@@ -525,16 +525,20 @@ sub runSSHDiagCmd
 #
 sub runCheckHANAVersion
 {
-    opendir my $handle,  '/hana/shared/'.$strHANASID.'/exe/linuxx86_64/';
-    foreach (readdir $handle) {
+    my $strDirectory1 =  '/hana/shared/'.$strHANASID.'/global/hdb/mdc';
+    my $strDirectory2 =  '/hana/shared/'.$strHANASID.'/'.$strHANASID.'/global/hdb/mdc';
 
-        if ($_ =~ m/HDB/) {
-          my @chars = split("", $_);
-          $strHANAVersion = $chars[4];
-          logMsg($LOG_INFO,"HANA Version: $strHANAVersion for SID: $strHANASID");
-        }
-      }
-      closedir $handle;
+    if (-d $strDirectory1 or -d $strDirectory2) {
+      $strHANAVersion = 2;
+      print color('bold green');
+      logMsg($LOG_INFO,"Detected MDC environment for $strHANASID. Proceeding with MDC HANA commands");
+      print color('reset');
+    } else {
+      $strHANAVersion = 1;
+      print color('bold green');
+      logMsg($LOG_INFO,"Detected non-MDC environment for $strHANASID. Proceeding with non-MDC HANA commands");
+      print color('reset');
+    }
 }
 
 
