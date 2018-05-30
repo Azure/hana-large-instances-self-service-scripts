@@ -4,8 +4,8 @@
 # Specifications subject to change without notice.
 #
 # Name: testStorageSnapshotConnection.pl
-# Version: 3.3
-# Date 05/15/2018
+# Version: 3.3.1
+# Date 05/29/2018
 
 use strict;
 use warnings;
@@ -37,7 +37,7 @@ my $verbose = 1;
 #
 # Global Tunables
 
-my $version = "3.3";  #current version number of script
+my $version = "3.3.1";  #current version number of script
 my @arrOutputLines;                   #Keeps track of all messages (Info, Critical, and Warnings) for output to log file
 my @fileLines;                        #Input stream from HANABackupCustomerDetails.txt
 my @strSnapSplit;
@@ -54,6 +54,7 @@ my $sshCmd = '/usr/bin/ssh';          #typical location of ssh on SID
 my $strHANASID;                       #The customer entered HANA SID for each iteration of SID entered with HANABackupCustomerDetails.txt
 my $outputFilename = "";              #Generated filename for scipt output
 my @snapshotLocations;                #arroy of all snapshots for certain volumes that match customer SID.
+my @snapshotLocationsOSBackups;       #array of all snapshots for OS Backups
 my @volLocations;                     #array of all volumes that match SID input by customer
 my $HSR = 0;                          #used within only scripts, otherwise flagged to zero. **not used in this script**
 
@@ -593,7 +594,7 @@ sub runGetVolumeLocationsTypeI
 	} else {
 		logMsg( $LOG_INFO, "Volume show completed successfully." );
 	}
-	my $i=$#snapshotLocations+1;
+	my $i=0;
 	my $listnum = 0;
 	my $count = $#out - 1;
 	for my $j (0 ... $count ) {
@@ -606,7 +607,7 @@ sub runGetVolumeLocationsTypeI
 			#logMsg( $LOG_INFO, $i."-".$name );
 			if (defined $name) {
 				logMsg( $LOG_INFO, "Adding volume $name to the snapshot list." );
-				$snapshotLocations[$i][0] = $name;
+				$snapshotLocationsOSBackups[$i][0] = $name;
 
 			}
 	$i++;
@@ -635,8 +636,15 @@ sub runGetVolumeLocationsTypeII
 	} else {
 		logMsg( $LOG_INFO, "Volume show completed successfully." );
 	}
-	my $i=$#snapshotLocations+1;
-	my $listnum = 0;
+  my $i;
+
+  if ($#snapshotLocationsOSBackups ge 0) {
+    $i=$#snapshotLocationsOSBackups+1;
+  } else {
+    $i=0;
+  }
+
+  my $listnum = 0;
 	my $count = $#out - 1;
 	for my $j (0 ... $count ) {
 		$listnum++;
@@ -648,7 +656,7 @@ sub runGetVolumeLocationsTypeII
 			#logMsg( $LOG_INFO, $i."-".$name );
 			if (defined $name) {
 				logMsg( $LOG_INFO, "Adding volume $name to the snapshot list." );
-				$snapshotLocations[$i][0] = $name;
+				$snapshotLocationsOSBackups[$i][0] = $name;
 
 			}
 	$i++;
@@ -672,6 +680,36 @@ print color('reset');
 #storage command necessary to create storage snapshot, others items to include: snapmirror-label matching snapshot type/frequency and HANA snapshot backup id matching as comment
 		my $date = localtime->strftime('%Y-%m-%d_%H%M');
 		my $strSSHCmd = "volume snapshot create -volume $snapshotLocations[$i][0] -snapshot $strSnapshotPrefix\.$date\.temp -snapmirror-label $strSnapshotPrefix";
+		my @out = runSSHCmd( $strSSHCmd );
+		if ( $? ne 0 ) {
+			logMsg( $LOG_WARN, "Snapshot creation command '" . $strSSHCmd . "' failed: $?" );
+      logMsg( $LOG_WARN, "Please try again in a few minutes");
+      logMsg( $LOG_WARN, "If issue persists, please contact Microsoft Operations for assistance");
+      runExit($exitWarn);
+		} else {
+      print color('bold green');
+      logMsg( $LOG_INFO, "Snapshot created successfully." );
+      print color('reset');
+		}
+	}
+}
+
+#
+# Name: runCreateStorageSnapshotOSBackups()
+# Func: Creates the temporary storage snapshot with index .temp for OS Backups
+#
+
+sub runCreateStorageSnapshotOSBackups
+{
+print color('bold cyan');
+logMsg($LOG_INFO, "**********************Creating Storage snapshot for OS Backups**********************");
+print color('reset');
+		for my $i (0 .. $#snapshotLocationsOSBackups) {
+		# take the recent snapshot with SSH
+		logMsg( $LOG_INFO, "Taking snapshot $strSnapshotPrefix\.temp for $snapshotLocationsOSBackups[$i][0] ..." );
+#storage command necessary to create storage snapshot, others items to include: snapmirror-label matching snapshot type/frequency and HANA snapshot backup id matching as comment
+		my $date = localtime->strftime('%Y-%m-%d_%H%M');
+		my $strSSHCmd = "volume snapshot create -volume $snapshotLocationsOSBackups[$i][0] -snapshot $strSnapshotPrefix\.$date\.temp -snapmirror-label $strSnapshotPrefix";
 		my @out = runSSHCmd( $strSSHCmd );
 		if ( $? ne 0 ) {
 			logMsg( $LOG_WARN, "Snapshot creation command '" . $strSSHCmd . "' failed: $?" );
@@ -730,11 +768,55 @@ print color('reset');
 }
 
 #
+# Name: runGetSnapshotsByVolume()
+# Func: Gets list of snapshots for each volume matching SID
+#
+
+sub runGetSnapshotsByVolumeOSBackups
+{
+print color('bold cyan');
+logMsg($LOG_INFO, "**********************Adding list of snapshots to volume list for OS Backups**********************");
+print color('reset');
+		my $i = 0;
+
+		logMsg( $LOG_INFO, "Collecting set of snapshots for each volume for OS Backups" );
+		for my $i (0 .. $#snapshotLocationsOSBackups) {
+				my $j = 0;
+				my $strSSHCmd = "volume snapshot show -volume $snapshotLocationsOSBackups[$i][0] -fields snapshot";
+				my @out = runSSHCmd( $strSSHCmd );
+				if ( $? ne 0 ) {
+						logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
+            logMsg( $LOG_WARN, "Please try again in a few minutes");
+            logMsg( $LOG_WARN, "If issue persists, please contact Microsoft Operations for assistance.");
+						runExit($exitWarn);
+				}
+				my $listnum = 0;
+				$j=1;
+				my $count = $#out-1;
+				foreach my $k ( 0 ... $count ) {
+							#logMsg($LOG_INFO, $item)
+							$j++;
+							$listnum++;
+							if ( $listnum <= 4) {
+								chop $out[$k];
+								$j=1;
+							}
+							my @strSubArr = split( /,/, $out[$k] );
+							my $strSub = $strSubArr[$#strSubArr-1];
+							$snapshotLocationsOSBackups[$i][$j] = $strSub;
+				}
+
+		}
+
+}
+
+
+#
 # Name: displayArray()
 # Func: displays the list of snapshots by volume
 #
-
 sub displayArray
+
 {
 print color('bold cyan');
 logMsg($LOG_INFO, "**********************Displaying Snapshots by Volume**********************");
@@ -744,6 +826,26 @@ print color('reset');
                 for my $j (0 .. $#{$aref} ) {
 
                          logMsg($LOG_INFO,$snapshotLocations[$i][$j]);
+                 }
+         }
+
+}
+
+#
+# Name: displayArray()
+# Func: displays the list of snapshots by volume for OS Backups
+#
+
+sub displayArrayOSBackups
+{
+print color('bold cyan');
+logMsg($LOG_INFO, "**********************Displaying Snapshots by Volume for OS Backups**********************");
+print color('reset');
+         for my $i (0 .. $#snapshotLocationsOSBackups) {
+                my $aref = $snapshotLocationsOSBackups[$i];
+                for my $j (0 .. $#{$aref} ) {
+
+                         logMsg($LOG_INFO,$snapshotLocationsOSBackups[$i][$j]);
                  }
          }
 
@@ -813,6 +915,17 @@ runGetParameterDetails();
 #verify all required details entered for each SID
 runVerifySIDDetails();
 
+$strUser = $arrCustomerDetails[0][1];
+$strSVM = $arrCustomerDetails[0][2];
+
+runGetVolumeLocationsTypeI();
+runGetVolumeLocationsTypeII();
+runCreateStorageSnapshotOSBackups();
+runGetSnapshotsByVolumeOSBackups();
+displayArrayOSBackups();
+
+
+
 for my $i (0 .. $numSID) {
 
   #logMsg($LOG_INFO,"arrCustomerDetails[".$i."][0]: ". $arrCustomerDetails[$i][0]);
@@ -834,9 +947,6 @@ runCheckStorageSnapshotStatus();
 
 # get volume(s) to take a snapshot of based on HANA instance provided
 runGetVolumeLocationsHANA();
-runGetVolumeLocationsTypeI();
-runGetVolumeLocationsTypeII();
-
 
 # execute a storage snapshot of empty volume to create values
 runCreateStorageSnapshot();

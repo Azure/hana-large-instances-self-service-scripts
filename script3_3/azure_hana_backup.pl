@@ -4,8 +4,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_backup.pl
-#Version: 3.3
-#Date 05/15/2018
+#Version: 3.3.1
+#Date 27-May-2018
 
 use strict;
 use warnings;
@@ -46,7 +46,7 @@ my $strBackupType = $ARGV[0]; #type of backup deployed. Options include hana, lo
 #
 
 #DO NOT MODIFY THESE VARIABLES!!!!
-my $version = "3.3";  #current version number of script
+my $version = "3.3.1";  #current version number of script
 my @arrOutputLines;                   #Keeps track of all messages (Info, Critical, and Warnings) for output to log file
 my @fileLines;                        #Input stream from HANABackupCustomerDetails.txt
 my @strSnapSplit;
@@ -1643,7 +1643,7 @@ if ($strBackupType eq "hana" or $strBackupType eq "logs" ) {
                 logMsg( $LOG_WARN, "Retention Value must be number only.".$numKeep." is not allowed" );
                 runExit($exitWarn);
        }
-       if ($numKeep le 0 or $numKeep gt 250) {
+       if ($numKeep <= 0 or $numKeep > 250) {
          #numKeep in range 1 to 250
          logMsg( $LOG_WARN, "A Customer provided retention value less than 1 or greater than 250 is not allowed" );
          runExit($exitWarn);
