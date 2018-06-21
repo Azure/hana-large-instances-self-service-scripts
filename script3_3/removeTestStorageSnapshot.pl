@@ -4,8 +4,8 @@
 # Specifications subject to change without notice.
 #
 # Name: removeTestStorageSnapshot.pl
-#Version: 3.3
-#Date 05/15/2018
+# Date 05/15/2018
+my $version = "3.3";  #current version number of script
 
 use strict;
 use warnings;
@@ -32,7 +32,6 @@ my $exitCode;
 # Global Tunables
 #
 #DO NOT MODIFY THESE VARIABLES!!!!
-my $version = "3.3";  #current version number of script
 my @arrOutputLines;                   #Keeps track of all messages (Info, Critical, and Warnings) for output to log file
 my @fileLines;                        #Input stream from HANABackupCustomerDetails.txt
 my @strSnapSplit;

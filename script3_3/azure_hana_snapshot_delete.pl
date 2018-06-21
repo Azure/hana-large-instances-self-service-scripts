@@ -4,8 +4,8 @@
 # Specifications subject to change without notice.
 #
 # Name: azure_hana_backup.pl
-#Version: 3.3.1
-#Date 05/28/2018
+# Date 05/28/2018
+my $version = "3.3.1";    #current version number of script
 
 use strict;
 use warnings;
@@ -46,7 +46,6 @@ my $exitCode;
 # Global Tunables
 #
 #DO NOT MODIFY THESE VARIABLES!!!!
-my $version = "3.3.1";    #current version number of script
 my $verbose = 0;
 my @arrOutputLines
   ; #Keeps track of all messages (Info, Critical, and Warnings) for output to log file
