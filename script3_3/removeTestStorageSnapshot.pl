@@ -5,7 +5,7 @@
 #
 # Name: removeTestStorageSnapshot.pl
 # Date 05/15/2018
-my $version = "3.3";  #current version number of script
+my $version = "3.3.1";  #current version number of script
 
 use strict;
 use warnings;
@@ -23,6 +23,7 @@ my $ERR_WARN=1;
 # Log levels -- LOG_INFO, LOG_WARN.  Bitmap values
 my $LOG_INFO=1;
 my $LOG_WARN=2;
+my $LOG_CRIT=3;
 
 # Global parameters
 my $exitWarn = 0;
@@ -51,9 +52,6 @@ my $strHANASID = $ARGV[0];                     #The customer entered HANA SID fo
 my $outputFilename = "";              #Generated filename for scipt output
 my @snapshotLocations;                #arroy of all snapshots for certain volumes that match customer SID.
 my @volLocations;                     #array of all volumes that match SID input by customer
-
-my $filename = "HANABackupCustomerDetails.txt";
-my $sshCmd = '/usr/bin/ssh';
 
 my $verbose = 1;
 my $HSR = 0;                          #used within only scripts, otherwise flagged to zero. **not used in this script**
