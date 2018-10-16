@@ -75,7 +75,7 @@ my $HSR            = 0;                                    #used within only scr
 
 sub runOpenParametersFiles {
     open( my $fh, '<:encoding(UTF-8)', $filename )
-        or die "Could not open file '$filename' $!";
+      or die "Could not open file '$filename' $!";
 
     chomp( @fileLines = <$fh> );
     close $fh;
@@ -360,7 +360,7 @@ sub runGetParameterDetails {
 
 sub runVerifySIDDetails {
 
-    NUMSID: for my $i ( 0 ... $numSID ) {
+  NUMSID: for my $i ( 0 ... $numSID ) {
         my $checkSID                = 1;
         my $checkBackupName         = 1;
         my $checkIPAddress          = 1;
@@ -391,14 +391,16 @@ sub runVerifySIDDetails {
             and $checkBackupName eq 0
             and $checkIPAddress eq 0
             and $checkHANAInstanceNumber eq 0
-            and $checkHANAUserstoreName eq 0 ) {
+            and $checkHANAUserstoreName eq 0 )
+        {
             next;
         }
         elsif ( $checkSID eq 1
             and $checkBackupName eq 1
             and $checkIPAddress eq 1
             and $checkHANAInstanceNumber eq 1
-            and $checkHANAUserstoreName eq 1 ) {
+            and $checkHANAUserstoreName eq 1 )
+        {
             next;
         }
         else {
@@ -522,7 +524,7 @@ sub runShellCmd {
 #
 sub runSSHCmd {
     my ($strShellCmd) = @_;
-    return (`"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1`);
+    return ( `"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1` );
 }
 
 #
@@ -794,9 +796,9 @@ sub runVerifyHANASnapshot {
                 if ( $snapshotLocations[$i][$j][1] eq $strBackupid ) {
                     $boolBackupidFound = 1;
                     $HANASnapshotLocations[$k][0] =
-                        $snapshotLocations[$i][0][0];
+                      $snapshotLocations[$i][0][0];
                     $HANASnapshotLocations[$k][1] =
-                        $snapshotLocations[$i][$j][0];
+                      $snapshotLocations[$i][$j][0];
                     logMsg( $LOG_CRIT, "Adding Snapshot $HANASnapshotLocations[$k][1] from volume $HANASnapshotLocations[$k][0]" );
                     $k++;
                 }
@@ -841,9 +843,9 @@ sub runPrintFile {
     }
     my $existingdir = './snapshotLogs';
     mkdir $existingdir
-        unless -d $existingdir;    # Check if dir exists. If not create it.
+      unless -d $existingdir;    # Check if dir exists. If not create it.
     open my $fileHandle, ">>", "$existingdir/$outputFilename"
-        or die "Can't open '$existingdir/$outputFilename'\n";
+      or die "Can't open '$existingdir/$outputFilename'\n";
     print color('bold green');
     logMsg( $LOG_CRIT, "Log file created at " . $existingdir . "/" . $outputFilename );
     print color('reset');

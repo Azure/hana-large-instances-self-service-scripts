@@ -5,8 +5,8 @@
 #
 # Name: azure_hana_test_dr_failover.pl
 # Release Date  15-May-2018
-# Last Update   23-Aug-2018
-my $version = "3.4";    #current version number of script
+# Last Update   12-Oct-2018
+my $version = "3.4.1";    #current version number of script
 
 use strict;
 use warnings;
@@ -84,7 +84,7 @@ my $HSR      = 0;                     #flags whether HSR is detected in environm
 
 sub runOpenParametersFiles {
     open( my $fh, '<:encoding(UTF-8)', $filename )
-        or die "Could not open file '$filename' $!";
+      or die "Could not open file '$filename' $!";
 
     chomp( @fileLines = <$fh> );
     close $fh;
@@ -369,7 +369,7 @@ sub runGetParameterDetails {
 
 sub runVerifySIDDetails {
 
-    NUMSID: for my $i ( 0 ... $numSID ) {
+  NUMSID: for my $i ( 0 ... $numSID ) {
         my $checkSID                = 1;
         my $checkBackupName         = 1;
         my $checkIPAddress          = 1;
@@ -396,10 +396,20 @@ sub runVerifySIDDetails {
             $checkHANAUserstoreName = 0;
         }
 
-        if ( $checkSID eq 0 and $checkBackupName eq 0 and $checkIPAddress eq 0 and $checkHANAInstanceNumber eq 0 and $checkHANAUserstoreName eq 0 ) {
+        if (    $checkSID eq 0
+            and $checkBackupName eq 0
+            and $checkIPAddress eq 0
+            and $checkHANAInstanceNumber eq 0
+            and $checkHANAUserstoreName eq 0 )
+        {
             next;
         }
-        elsif ( $checkSID eq 1 and $checkBackupName eq 1 and $checkIPAddress eq 1 and $checkHANAInstanceNumber eq 1 and $checkHANAUserstoreName eq 1 ) {
+        elsif ( $checkSID eq 1
+            and $checkBackupName eq 1
+            and $checkIPAddress eq 1
+            and $checkHANAInstanceNumber eq 1
+            and $checkHANAUserstoreName eq 1 )
+        {
             next;
         }
         else {
@@ -523,12 +533,12 @@ sub runShellCmd {
 
 sub runSSHCmd {
     my ($strShellCmd) = @_;
-    return (`"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1`);
+    return ( `"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1` );
 }
 
 sub runSSHDiagCmd {
     my ($strShellCmd) = @_;
-    return (`"$sshCmd" -l $strUser $strSVM 'set diag -confirmations off -showseparator ","; $strShellCmd' 2>&1`);
+    return ( `"$sshCmd" -l $strUser $strSVM 'set diag -confirmations off -showseparator ","; $strShellCmd' 2>&1` );
 }
 
 #
@@ -541,7 +551,7 @@ sub runGetVolumeLocations {
     logMsg( $LOG_CRIT, "**********************Getting list of volumes that match HANA instance specified**********************" );
     print color('reset');
     logMsg( $LOG_CRIT, "Collecting set of volumes hosting HANA matching pattern *$strHANASID* ..." );
-    my $strSSHCmd = "volume show -volume *" . $strHANASID . "* -volume !*clone* -state online -fields volume";
+    my $strSSHCmd = "volume show -volume *_" . $strHANASID . "_* -volume !*clone* -state online -fields volume";
     my @out       = runSSHCmd($strSSHCmd);
     if ( $? ne 0 ) {
         logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
@@ -632,7 +642,9 @@ sub runGetSnapshotsByVolume {
     foreach my $volName (@volLocations) {
         my $j = 0;
 
-        if ( ( ( $volName !~ /data/ and $volName !~ /log_backups/ ) and ( $volName =~ /dp/ or $volName =~ /xdp/ ) ) or $volName =~ /vol/ ) {
+        if ( ( ( $volName !~ /data/ and $volName !~ /log_backups/ ) and ( $volName =~ /dp/ or $volName =~ /xdp/ ) )
+            or $volName =~ /vol/ )
+        {
             next;
         }
         $snapshotLocations[$i][0] = $volName;
@@ -828,7 +840,11 @@ sub runVerifySnapshotsExist {
             #      logMsg($LOG_CRIT, "Volume: $volumeNode1 Snapshot: $snapshotNode1");
             #      logMsg($LOG_CRIT, "Volume: $volumeNode2 Snapshot: $snapshotNode2");
 
-            if ( $volumeNode1 ne "" and $volumeNode2 ne "" and $snapshotNode1 ne "" and $snapshotNode2 ne "" ) {
+            if (    $volumeNode1 ne ""
+                and $volumeNode2 ne ""
+                and $snapshotNode1 ne ""
+                and $snapshotNode2 ne "" )
+            {
                 logMsg( $LOG_CRIT, "Volume: $volumeNode1 Snapshot: $snapshotNode1" );
                 logMsg( $LOG_CRIT, "Volume: $volumeNode2 Snapshot: $snapshotNode2" );
                 my @strSnapSplitNode1 = split( /\./, $snapshotNode1 );
@@ -906,7 +922,11 @@ sub runVerifySnapshotsExist {
             my $volumeNode2   = $logBackupsList[1][0];
             my $snapshotNode1 = $logBackupsList[0][1];
             my $snapshotNode2 = $logBackupsList[1][1];
-            if ( $volumeNode1 ne "" and $volumeNode2 ne "" and $snapshotNode1 ne "" and $snapshotNode2 ne "" ) {
+            if (    $volumeNode1 ne ""
+                and $volumeNode2 ne ""
+                and $snapshotNode1 ne ""
+                and $snapshotNode2 ne "" )
+            {
                 logMsg( $LOG_CRIT, "Volume: $volumeNode1 Snapshot: $snapshotNode1" );
                 logMsg( $LOG_CRIT, "Volume: $volumeNode2 Snapshot: $snapshotNode2" );
                 my @strSnapSplitNode1 = split( /\./, $snapshotNode1 );
@@ -980,7 +1000,7 @@ sub runGetSnapmirrorVolumes {
     logMsg( $LOG_CRIT, "**********************Getting list of replication relationships that match HANA instance provided**********************" );
     print color('reset');
     logMsg( $LOG_INFO, "Collecting set of relationships hosting HANA matching pattern *$strHANASID* ..." );
-    my $strSSHCmd = "snapmirror show -type DP|XDP -destination-volume *$strHANASID* -destination-volume !*shared* -fields destination-volume";
+    my $strSSHCmd = "snapmirror show -type DP|XDP -destination-volume *_" . $strHANASID . "_* -destination-volume !*shared* -fields destination-volume";
     my @out       = runSSHCmd($strSSHCmd);
     if ( $? ne 0 ) {
         logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
@@ -1213,7 +1233,7 @@ sub runCloneSnapshot {
         my $strClone           = $volName . "_drclone_" . $date;
         my $volumeCloneComment = "Clone expiry: $cloneExpiryDate, Customer contact: $contactEmail";
         my $strSSHCmd =
-            "volume clone create -flexclone $strClone -type RW -parent-volume " . $volName . " -space-guarantee none -junction-active true -foreground true -parent-snapshot " . $snapshotName . " -junction-path /" . $strClone . " -comment \"" . $volumeCloneComment . "\"";    # comment quoted in "
+          "volume clone create -flexclone $strClone -type RW -parent-volume " . $volName . " -space-guarantee none -junction-active true -foreground true -parent-snapshot " . $snapshotName . " -junction-path /" . $strClone . " -comment \"" . $volumeCloneComment . "\"";    # comment quoted in "
 
         #logMsg( $LOG_CRIT, "Running '" . $strSSHCmd . "'" );
         my @out = runSSHCmd($strSSHCmd);
@@ -1275,7 +1295,12 @@ sub runDisplayMountPoints {
     for my $i ( 0 .. $#displayMounts ) {
         my $volName = $displayMounts[$i];
 
-        if ( ( ( $volName !~ /data/ and $volName !~ /log_backups/ ) and ( $volName =~ /dp/ or $volName =~ /xdp/ ) ) or ( ( $volName !~ /log/ and $volName !~ /shared/ and $volName !~ /usr_sap/ ) and $volName =~ /vol/ ) ) {
+        if (
+            ( ( $volName !~ /data/ and $volName !~ /log_backups/ ) and ( $volName =~ /dp/ or $volName =~ /xdp/ ) )
+            or ( ( $volName !~ /log/ and $volName !~ /shared/ and $volName !~ /usr_sap/ )
+                and $volName =~ /vol/ )
+          )
+        {
             logMsg( $LOG_INFO, "Skipping $volName" );
             next;
         }
@@ -1341,12 +1366,24 @@ sub runDisplayMountPoints {
             }
         }
 
-        if ( $addressLocations[$i][0] =~ m/data/ and $addressLocations[$i][0] =~ m/clone/ and ( $addressLocations[$i][0] =~ m/xdp/ or $addressLocations[$i][0] =~ m/dp/ ) ) {
+        if (
+                $addressLocations[$i][0] =~ m/data/
+            and $addressLocations[$i][0] =~ m/clone/
+            and (  $addressLocations[$i][0] =~ m/xdp/
+                or $addressLocations[$i][0] =~ m/dp/ )
+          )
+        {
 
             logMsg( $LOG_INPUT, $addressLocations[$i][1] . ":/" . $addressLocations[$i][0] . "   /hana/data/" . $strHANASID . "/" . $mountNode . "   " . $strMountOptions );
 
         }
-        if ( $addressLocations[$i][0] =~ m/log_backups/ and $addressLocations[$i][0] =~ m/clone/ and ( $addressLocations[$i][0] =~ m/xdp/ or $addressLocations[$i][0] =~ m/dp/ ) ) {
+        if (
+                $addressLocations[$i][0] =~ m/log_backups/
+            and $addressLocations[$i][0] =~ m/clone/
+            and (  $addressLocations[$i][0] =~ m/xdp/
+                or $addressLocations[$i][0] =~ m/dp/ )
+          )
+        {
 
             my @addressPath = split( "_", $addressLocations[$i][0] );
             my $SID         = uc( $addressPath[3] );
@@ -1355,7 +1392,7 @@ sub runDisplayMountPoints {
             if ( $logCount > 1 ) {
 
                 # keep mount points unique for log_backups as their may be multiple log_backups recovered (e.g. for HSR).
-                my $mountPath = $SID . "_" . $hostname;
+                $mountPath = $SID . "_" . $hostname;
             }
 
             logMsg( $LOG_INPUT, $addressLocations[$i][1] . ":/" . $addressLocations[$i][0] . "   /hana/logbackups/" . $mountPath . "   " . $strMountOptions );
@@ -1482,8 +1519,10 @@ sub runPrintFile {
         $outputFilename = "testDR.$date.txt";
     }
     my $existingdir = './snapshotLogs';
-    mkdir $existingdir unless -d $existingdir;    # Check if dir exists. If not create it.
-    open my $fileHandle, ">>", "$existingdir/$outputFilename" or die "Can't open '$existingdir/$outputFilename'\n";
+    mkdir $existingdir
+      unless -d $existingdir;    # Check if dir exists. If not create it.
+    open my $fileHandle, ">>", "$existingdir/$outputFilename"
+      or die "Can't open '$existingdir/$outputFilename'\n";
     print color('bold green');
     logMsg( $LOG_CRIT, "Log file created at " . $existingdir . "/" . $outputFilename );
     print color('reset');
@@ -1508,7 +1547,7 @@ if ( defined( $ARGV[0] ) ) {
 logMsg( $LOG_INFO, "********** Introduction **********" );
 my $inputProceed;
 my $strHello =
-    "This script is designed for those customers who have previously installed the Production HANA instance in the Disaster Recovery Location either as a stand-alone instance or as part of a multi-purpose environment. This script is intended to allow the customer to simulate a Disaster Recovery failover without actually requiring a failover and subsequent failback.  This script will clone the most recent snapshot for both the Data and Log Backups filesystems.  Any other restore points must be handled by Microsoft Operations.  Please enter the HANA <SID> you wish to restore. This script must be executed from the Disaster Recovery location otherwise unintended actions may occur.  As part of the script process, a clone is created of the necessary Disaster Recovery volumes for Data and Log Backups volumes.  \n";
+"This script is designed for those customers who have previously installed the Production HANA instance in the Disaster Recovery Location either as a stand-alone instance or as part of a multi-purpose environment. This script is intended to allow the customer to simulate a Disaster Recovery failover without actually requiring a failover and subsequent failback.  This script will clone the most recent snapshot for both the Data and Log Backups filesystems.  Any other restore points must be handled by Microsoft Operations.  Please enter the HANA <SID> you wish to restore. This script must be executed from the Disaster Recovery location otherwise unintended actions may occur.  As part of the script process, a clone is created of the necessary Disaster Recovery volumes for Data and Log Backups volumes.  \n";
 $strHello =~ s/([^\n]{0,120})(?:\b\s*|\n)/$1\n/gio;
 logMsg( $LOG_INPUT, $strHello );
 
@@ -1543,7 +1582,8 @@ logMsg( $LOG_INFO, "Contact email -> " . $contactEmail );
 # now calculate a future expiry date for the clone
 my $now = time();
 my $fourWeeksLater = $now + ( $weeksCloneKept * 7 ) * 86400;
-my ( $minute, $hour, $day, $mon, $year ) = ( localtime($fourWeeksLater) )[ 1, 2, 3, 4, 5 ];
+my ( $minute, $hour, $day, $mon, $year ) =
+  ( localtime($fourWeeksLater) )[ 1, 2, 3, 4, 5 ];
 $cloneExpiryDate = sprintf '%04d-%02d-%02d %02d:%02d', $year + 1900, $mon + 1, $day, $hour, $minute;
 logMsg( $LOG_INFO, "Clone expiry date -> " . $cloneExpiryDate );
 
