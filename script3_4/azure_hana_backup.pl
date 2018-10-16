@@ -5,14 +5,14 @@
 #
 # Name: azure_hana_backup.pl
 # Release Date 	31-May-2018
-# Last Update	23-Aug-2018
-my $version = "3.4";    #current version number of script
+# Last Update	12-Oct-2018
+my $version = "3.4.1";    #current version number of script
 
 use strict;
 use warnings;
-use Time::Piece;        #takes system current time and converts to usable format
+use Time::Piece;          #takes system current time and converts to usable format
 use Date::Parse;
-use Time::HiRes;        #allows usage of tenths of second in wait command
+use Time::HiRes;          #allows usage of tenths of second in wait command
 use Term::ANSIColor;
 use Sys::Hostname;
 use IO::Socket::INET;
@@ -106,7 +106,7 @@ my @snapshotCreated;                  #array of volumes where snapshots are crea
 
 sub runOpenParametersFiles {
     open( my $fh, '<:encoding(UTF-8)', $filename )
-        or die "Could not open file '$filename' $!";
+      or die "Could not open file '$filename' $!";
 
     chomp( @fileLines = <$fh> );
     close $fh;
@@ -385,7 +385,7 @@ sub runGetParameterDetails {
 # Func: ensures that all necessary details for an SID entered are provided and understood.
 sub runVerifySIDDetails {
 
-    NUMSID: for my $i ( 0 ... $numSID ) {
+  NUMSID: for my $i ( 0 ... $numSID ) {
         my $checkSID                = 1;
         my $checkBackupName         = 1;
         my $checkIPAddress          = 1;
@@ -416,14 +416,16 @@ sub runVerifySIDDetails {
             and $checkBackupName eq 0
             and $checkIPAddress eq 0
             and $checkHANAInstanceNumber eq 0
-            and $checkHANAUserstoreName eq 0 ) {
+            and $checkHANAUserstoreName eq 0 )
+        {
             next;
         }
         elsif ( $checkSID eq 1
             and $checkBackupName eq 1
             and $checkIPAddress eq 1
             and $checkHANAInstanceNumber eq 1
-            and $checkHANAUserstoreName eq 1 ) {
+            and $checkHANAUserstoreName eq 1 )
+        {
             next;
         }
         else {
@@ -544,7 +546,7 @@ sub runShellCmd {
 sub runSSHCmd {
 
     my ($strShellCmd) = @_;
-    return (`"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1`);
+    return ( `"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1` );
 }
 
 #
@@ -558,14 +560,15 @@ sub runSSHDiagCmd {
     my $sshcmd_return_code;
     my @wait_period_range = ( 0, 7, 21, 63 );    # seconds to wait before executing command,  0 seconds on first attempt,  7 seconds on second attempt,  ....
     my $count_runs = 0;                          # only run the command for the total number of items in the @wait_period_range array.
-    RUNCOMMAND: {                                # start of do..until block to allow 'last' to exit block.
+  RUNCOMMAND: {                                  # start of do..until block to allow 'last' to exit block.
         do {
             my $wait_period_secs = $wait_period_range[$count_runs];
             sleep($wait_period_secs);            # first wait period should be 0, see @wait_period_range!
-            @sshcmd_output      = (`"$sshCmd" -l $strUser $strSVM 'set diagnostic -confirmations off -showseparator ","; $strShellCmd' 2>&1`);
+            @sshcmd_output      = ( `"$sshCmd" -l $strUser $strSVM 'set diagnostic -confirmations off -showseparator ","; $strShellCmd' 2>&1` );
             $sshcmd_return_code = $?;
             $count_runs++;
-            last if $sshcmd_return_code == 0;    # command was successful, so we can exit RUNCOMMAND block.
+            last
+              if $sshcmd_return_code == 0;       # command was successful, so we can exit RUNCOMMAND block.
             logMsg( $LOG_WARN, "Running '" . $strShellCmd . "' failed: $?" );
             logMsg( $LOG_WARN, "Retrying in $wait_period_secs seconds.\n" );
         } until $count_runs > $#wait_period_range;
@@ -679,7 +682,7 @@ sub runCheckHSRStatus {
 
     # the following will get a list of hostnames which are the 'other' HSR nodes.
     my $strHSRNodesCmd =
-        './hdbsql -jaxC -n ' . $strPrimaryHANAServerIPAddress . ' -i ' . $strHANANumInstance . ' -U ' . $strHANAAdmin . ' "select RECEIVER_HOST from SYS.M_SERVICE_NETWORK_IO where not exists ( select HOST from SYS.M_SERVICES where SYS.M_SERVICE_NETWORK_IO.RECEIVER_HOST = SYS.M_SERVICES.HOST) ;"';
+      './hdbsql -jaxC -n ' . $strPrimaryHANAServerIPAddress . ' -i ' . $strHANANumInstance . ' -U ' . $strHANAAdmin . ' "select RECEIVER_HOST from SYS.M_SERVICE_NETWORK_IO where not exists ( select HOST from SYS.M_SERVICES where SYS.M_SERVICE_NETWORK_IO.RECEIVER_HOST = SYS.M_SERVICES.HOST) ;"';
 
     #logMsg( $LOG_CRIT, $strHSRNodesCmd );
     my @HSRNodes = runShellCmd($strHSRNodesCmd);
@@ -805,7 +808,7 @@ sub runGetVolumeLocations {
         logMsg( $LOG_CRIT, "**********************Getting list of volumes that match HANA instance specified**********************" );
         print color('reset');
         logMsg( $LOG_CRIT, "Collecting set of volumes hosting HANA matching pattern *$strHANASID* ..." );
-        $strSSHCmd = "volume show -volume *" . $strHANASID . "* -state online -volume !*log_backups* -volume !*log* -type RW -fields volume";
+        $strSSHCmd = "volume show -volume *_" . $strHANASID . "_* -state online -volume !*log_backups* -volume !*log* -type RW -fields volume";
     }
     if ( $strOSBackupType eq "TYPEI" ) {
         print color('bold cyan');
@@ -1129,7 +1132,8 @@ sub runCreateHANASnapshot {
             logMsg( $LOG_WARN, "HANA snapshot creation command '" . $strHANACreateCmd . "' failed: $?" );
             if (    $intMDC eq 1
                 and $strHANAVersion eq 2
-                and $strHANARevision ge 10 ) {
+                and $strHANARevision ge 10 )
+            {
                 logMsg( $LOG_WARN, "Please ensure this is a single tenant system." );
                 logMsg( $LOG_WARN, "HANA Snapshot for multitenant system is not currently supported by SAP." );
                 logMsg( $LOG_WARN, "Please verify that a HANA Snapshot is not already open." );
@@ -1281,28 +1285,37 @@ sub runCreateStorageSnapshot {
                 runHANACloseSnapshot();
                 runExit($exitWarn);
             }
-            if ((   (      ( -e $strSnapshotLocation )
+            if (
+                (
+                    (
+                           ( -e $strSnapshotLocation )
                         or ( -e $strSnapshotLocation2 )
                     )
                     and ( $volName =~ m/$hostname/ )
                 )
-                or ((      ( -e $strSnapshotLocation )
+                or (
+                    (
+                           ( -e $strSnapshotLocation )
                         or ( -e $strSnapshotLocation2 )
                     )
                     and ( $volName =~ m/$volDataNoHSR/ )
                 )
-                or ((      ( -e $strSnapshotLocation )
+                or (
+                    (
+                           ( -e $strSnapshotLocation )
                         or ( -e $strSnapshotLocation2 )
                     )
                     and ( $volName =~ m/$volSharedNoHSR/ )
                 )
-                ) {
+              )
+            {
 
                 $strSSHCmd = "volume snapshot create -volume $volName -snapshot $strSnapshotPrefix\.$date\.recent -snapmirror-label $strSnapshotCustomerLabel -comment $strHANABackupID";
                 push( @snapshotCreated, $volName );
             }
             elsif ( ( ( -e $strSnapshotLocation ) or ( -e $strSnapshotLocation2 ) )
-                and ( $volName !~ m/$volDataNoHSR/ ) ) {
+                and ( $volName !~ m/$volDataNoHSR/ ) )
+            {
                 print color('bold magenta');
                 logMsg( $LOG_CRIT, "Skipping $volName as it was determined to be a non-active HSR Volume." );
                 logMsg( $LOG_CRIT, "If this volume is not part of an HSR setup, please contact Microsoft Operations for assistance." );
@@ -1322,7 +1335,8 @@ sub runCreateStorageSnapshot {
             my $volLogNoHSR = $strHANASID . "_" . $strTenantNumber;
             logMsg( $LOG_INFO, "No HSR Volume: " . $volLogNoHSR );
             if (   ( $volName =~ m/$hostname/ )
-                or ( $volName =~ m/$volLogNoHSR/ ) ) {
+                or ( $volName =~ m/$volLogNoHSR/ ) )
+            {
 
                 $strSSHCmd = "volume snapshot create -volume $volName -snapshot $strSnapshotPrefix\.$date\.recent -snapmirror-label $strSnapshotCustomerLabel";
                 push( @snapshotCreated, $volName );
@@ -1752,9 +1766,9 @@ sub runPrintFile {
 
     my $existingdir = './snapshotLogs';
     mkdir $existingdir
-        unless -d $existingdir;    # Check if dir exists. If not create it.
+      unless -d $existingdir;    # Check if dir exists. If not create it.
     open my $fileHandle, ">>", "$existingdir/$outputFilename"
-        or die "Can't open '$existingdir/$outputFilename'\n";
+      or die "Can't open '$existingdir/$outputFilename'\n";
     print color('bold green');
     logMsg( $LOG_CRIT, "Log file created at " . $existingdir . "/" . $outputFilename );
     print color('reset');
@@ -1777,25 +1791,29 @@ if ( !defined( $ARGV[0] ) ) {
 
 if (    $strBackupType ne "hana"
     and $strBackupType ne "logs"
-    and $strBackupType ne "boot" ) {
+    and $strBackupType ne "boot" )
+{
     logMsg( $LOG_WARN, "Please enter argument as either hana, logs, or boot." );
     runExit($exitWarn);
 }
 logMsg( $LOG_CRIT, "Executing " . $strBackupType . " backup." );
 if (    ( $strBackupType eq "hana" or $strBackupType eq "logs" )
-    and ( !defined( $ARGV[1] ) or !defined( $ARGV[2] ) or !defined( $ARGV[3] ) ) ) {
+    and ( !defined( $ARGV[1] ) or !defined( $ARGV[2] ) or !defined( $ARGV[3] ) ) )
+{
 
     logMsg( $LOG_WARN, "Please enter argument as either (hana or logs) <Customer Snapshot Label> <frequency> <retention> (verbose)" );
     runExit($exitWarn);
 }
 
-if ($strBackupType eq "boot"
+if (
+    $strBackupType eq "boot"
     and (  ( $ARGV[1] ne "TYPEI" and $ARGV[1] ne "TYPEII" )
         or $ARGV[1] eq ""
         or $ARGV[2] eq ""
         or $ARGV[3] eq ""
         or $ARGV[4] eq "" )
-    ) {
+  )
+{
     logMsg( $LOG_WARN, "Please enter argument as either boot <TYPEI or TYPEII> <Customer Snapshot Label> <frequency> <retention> (verbose)" );
     runExit($exitWarn);
 }
@@ -1811,7 +1829,8 @@ if ( $strBackupType eq "boot" and defined( $ARGV[5] ) ) {
 }
 
 if ( ( $strBackupType eq "hana" or $strBackupType eq "logs" )
-    and defined( $ARGV[4] ) ) {
+    and defined( $ARGV[4] ) )
+{
     if ( $ARGV[4] eq "verbose" ) {
         $verbose = 1;
     }
@@ -1833,10 +1852,12 @@ if ( $strBackupType eq "hana" or $strBackupType eq "logs" ) {
 
     for my $i ( 0 .. $numSID ) {
 
-        if ($arrCustomerDetails[$i][0]
+        if (
+            $arrCustomerDetails[$i][0]
             and (   $arrCustomerDetails[$i][0] ne "Skipped"
                 and $arrCustomerDetails[$i][0] ne "Omitted" )
-            ) {
+          )
+        {
             $strHANASID   = $arrCustomerDetails[$i][0];
             $strHANASIDUC = uc $strHANASID;
 

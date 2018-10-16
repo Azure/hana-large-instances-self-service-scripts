@@ -4,8 +4,9 @@
 # Specifications subject to change without notice.
 #
 # Name: removeTestStorageSnapshot.pl
-# Date 05/15/2018
-my $version = "3.4";    #current version number of script
+# Release Date: 15-May-2018
+# Last Update: 12-Oct-2018
+my $version = "3.4.1";    #current version number of script
 
 use strict;
 use warnings;
@@ -63,7 +64,7 @@ my $HSR     = 0;                                           #used within only scr
 
 sub runOpenParametersFiles {
     open( my $fh, '<:encoding(UTF-8)', $filename )
-        or die "Could not open file '$filename' $!";
+      or die "Could not open file '$filename' $!";
 
     chomp( @fileLines = <$fh> );
     close $fh;
@@ -349,7 +350,7 @@ sub runGetParameterDetails {
 
 sub runVerifySIDDetails {
 
-    NUMSID: for my $i ( 0 ... $numSID ) {
+  NUMSID: for my $i ( 0 ... $numSID ) {
         my $checkSID                = 1;
         my $checkBackupName         = 1;
         my $checkIPAddress          = 1;
@@ -376,10 +377,20 @@ sub runVerifySIDDetails {
             $checkHANAUserstoreName = 0;
         }
 
-        if ( $checkSID eq 0 and $checkBackupName eq 0 and $checkIPAddress eq 0 and $checkHANAInstanceNumber eq 0 and $checkHANAUserstoreName eq 0 ) {
+        if (    $checkSID eq 0
+            and $checkBackupName eq 0
+            and $checkIPAddress eq 0
+            and $checkHANAInstanceNumber eq 0
+            and $checkHANAUserstoreName eq 0 )
+        {
             next;
         }
-        elsif ( $checkSID eq 1 and $checkBackupName eq 1 and $checkIPAddress eq 1 and $checkHANAInstanceNumber eq 1 and $checkHANAUserstoreName eq 1 ) {
+        elsif ( $checkSID eq 1
+            and $checkBackupName eq 1
+            and $checkIPAddress eq 1
+            and $checkHANAInstanceNumber eq 1
+            and $checkHANAUserstoreName eq 1 )
+        {
             next;
         }
         else {
@@ -501,7 +512,7 @@ sub runSSHCmd {
 
     #logMsg($LOG_INFO,"inside runSSHCmd");
     my ($strShellCmd) = @_;
-    return (`"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1`);
+    return ( `"$sshCmd" -l $strUser $strSVM 'set -showseparator ","; $strShellCmd' 2>&1` );
 }
 
 #
@@ -541,7 +552,7 @@ sub runGetVolumeLocations {
     logMsg( $LOG_INFO, "**********************Getting list of volumes that match HANA instance specified**********************" );
     logMsg( $LOG_INFO, "Collecting set of volumes hosting HANA matching pattern *$strHANASID* ..." );
     print color('reset');
-    my $strSSHCmd = "volume show -volume *" . $strHANASID . "* -volume !*log_" . $strHANASID . "* -type RW -fields volume";
+    my $strSSHCmd = "volume show -volume *_" . $strHANASID . "_* -volume !*log_" . $strHANASID . "* -type RW -fields volume";
     my @out       = runSSHCmd($strSSHCmd);
     if ( $? ne 0 ) {
         logMsg( $LOG_WARN, "Running '" . $strSSHCmd . "' failed: $?" );
@@ -724,8 +735,10 @@ sub runPrintFile {
     my $date = localtime->strftime('%Y-%m-%d_%H%M');
     $outputFilename = "removeTestStorage.$date.txt";
     my $existingdir = './statusLogs';
-    mkdir $existingdir unless -d $existingdir;    # Check if dir exists. If not create it.
-    open my $fileHandle, ">>", "$existingdir/$outputFilename" or die "Can't open '$existingdir/$outputFilename'\n";
+    mkdir $existingdir
+      unless -d $existingdir;    # Check if dir exists. If not create it.
+    open my $fileHandle, ">>", "$existingdir/$outputFilename"
+      or die "Can't open '$existingdir/$outputFilename'\n";
     print color('bold green');
     logMsg( $LOG_CRIT, "Log file created at " . $existingdir . "/" . $outputFilename );
     print color('reset');
@@ -781,7 +794,12 @@ runVerifySIDDetails();
 for my $i ( 0 .. $numSID ) {
 
     #logMsg($LOG_INFO,"arrCustomerDetails[".$i."][0]: ". $arrCustomerDetails[$i][0]);
-    if ( $arrCustomerDetails[$i][0] and ( $arrCustomerDetails[$i][0] ne "Skipped" and $arrCustomerDetails[$i][0] ne "Omitted" ) ) {
+    if (
+        $arrCustomerDetails[$i][0]
+        and (   $arrCustomerDetails[$i][0] ne "Skipped"
+            and $arrCustomerDetails[$i][0] ne "Omitted" )
+      )
+    {
         $strHANASID = $arrCustomerDetails[$i][0];
         print color('bold blue');
         logMsg( $LOG_INFO, "Checking Snapshot Status for $strHANASID" );
