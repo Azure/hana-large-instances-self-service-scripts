@@ -1,0 +1,6 @@
+DATE: 22/July/2019
+WARNING: THESE TOOLS WILL NOT WORK FOR SAP HANA ON AZURE LARGE INSTANCES
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These tools are kept in this archive for historic purposes only.
+
+Due to changes in the storage back-end for SAP HANA on Azure Large Instances, these commands will no longer work.
