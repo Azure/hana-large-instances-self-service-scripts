@@ -30,9 +30,9 @@ Privacy information can be found at https://privacy.microsoft.com/en-us/
 Microsoft and any contributors reserve all others rights, whether under their respective copyrights, patents,
 or trademarks, whether by implication, estoppel or otherwise.
 
-#Instructions
-In order to leverage the scripts perform the steps:
+# Instructions
+In order to leverage the snapshot tools perform the steps:
 
-- Download the folder with the script version you need to your HANA Large Instance unit as documented in [SAP HANA Large Instances high availability and disaster recovery on Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-overview-high-availability-disaster-recovery).
-- Copy the pdf document that comes with the downloaded scripts and read it thoroughly to acquaint yourself with the design, setup and operations of the scripts.
+- Download the folder with the snapshot tools version you need to your SAP HANA on Azure Large Instance system as documented in [SAP HANA Large Instances high availability and disaster recovery on Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-overview-high-availability-disaster-recovery).
+- Use the documentation available on this Github repo to acquaint yourself with the design, setup and operations of the snapshot tools.
 
