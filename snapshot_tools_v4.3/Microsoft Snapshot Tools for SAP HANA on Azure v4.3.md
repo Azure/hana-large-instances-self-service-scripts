@@ -2265,6 +2265,7 @@ The following pre-requisites must be met before you plan the disaster recovery f
     primary instance has.
 - You read and understand the DR Failover procedure located at
     <https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-overview-high-availability-disaster-recovery#disaster-recovery-failover-procedure.>
+- You have setup and configured storage snapshots at the DR location.
 - The `HANABackupCustomerDetail.txt` file has been updated with the DR location storage
     information on the DR server.
 - You completed the steps at the DR site to:
