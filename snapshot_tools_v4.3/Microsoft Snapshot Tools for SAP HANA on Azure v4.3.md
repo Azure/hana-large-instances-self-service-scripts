@@ -515,7 +515,8 @@ database, change the IP address, usernames and passwords as appropriate:
     This example creates the SHOASNAP user in the SYSTEMDB.
 
     ```bash
-    hdbsql SYSTEMDB=> CREATE USER SHOASNAP PASSWORD <SHOASNAP_PASSWORD_CHANGE_ME> NO FORCE_FIRST_PASSWORD_CHANGE;
+    hdbsql SYSTEMDB=> CREATE USER SHOASNAP PASSWORD <SHOASNAP_PASSWORD_CHANGE_ME> 
+    NO FORCE_FIRST_PASSWORD_CHANGE;
     ```
 
 1. Grant the user permissions
@@ -586,7 +587,8 @@ usernames and passwords as appropriate:
     This example creates the SHOASNAP user in the SYSTEMDB.
 
     ```bash
-    hdbsql TENANTDB=> CREATE USER SHOASNAP PASSWORD <SHOASNAP_PASSWORD_CHANGE_ME> NO FORCE_FIRST_PASSWORD_CHANGE;
+    hdbsql TENANTDB=> CREATE USER SHOASNAP PASSWORD <SHOASNAP_PASSWORD_CHANGE_ME> 
+    NO FORCE_FIRST_PASSWORD_CHANGE;
     ```
 
 1. Grant the user permissions
@@ -620,7 +622,8 @@ SELECT HOST, SQL_PORT, DATABASE_NAME FROM SYS_DATABASES.M_SERVICES WHERE SQL_POR
 See the following example query and output.
 
 ```bash
-> hdbsql -jaxC -n 10.90.0.31:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> " SELECT HOST, SQL_PORT, DATABASE_NAME FROM SYS_DATABASES.M_SERVICES WHERE SQL_PORT LIKE '3%' "
+> hdbsql -jaxC -n 10.90.0.31:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> " SELECT HOST, 
+SQL_PORT, DATABASE_NAME FROM SYS_DATABASES.M_SERVICES WHERE SQL_PORT LIKE '3%' "
 sapprdhdb80,30013,SYSTEMDB
 sapprdhdb80,30015,H81
 sapprdhdb80,30041,H82
@@ -1093,7 +1096,9 @@ drwxr-x--- 4 h80adm sapsys 4096 Jan 17 06:55 /hana/logbackups/H80/catalog
 The following example will change the SAP HANA setting.
 
 ```bash
-> hdbsql -jaxC -n <HANA_ip_address>:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> "ALTER SYSTEM ALTER CONFIGURATION ('global.ini', 'SYSTEM') SET ('persistence', 'basepath_catalogbackup') = '/hana/logbackups/H80/catalog' WITH RECONFIGURE"
+> hdbsql -jaxC -n <HANA_ip_address>:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> "ALTER 
+SYSTEM ALTER CONFIGURATION ('global.ini', 'SYSTEM') SET ('persistence', 
+'basepath_catalogbackup') = '/hana/logbackups/H80/catalog' WITH RECONFIGURE"
 ```
 
 #### Check log and catalog backup locations
@@ -1105,7 +1110,9 @@ SYSTEM settings.
 > This query also returns the DEFAULT settings for comparison.
 
 ```bash
-> hdbsql -jaxC -n <HANA_ip_address> - i 00 -U SHOASNAP "select * from sys.m_inifile_contents where (key = 'basepath_databackup' or key ='basepath_datavolumes' or key = 'basepath_logbackup' or key = 'basepath_logvolumes' or key = 'basepath_catalogbackup')"
+> hdbsql -jaxC -n <HANA_ip_address> - i 00 -U SHOASNAP "select * from sys.m_inifile_contents 
+where (key = 'basepath_databackup' or key ='basepath_datavolumes' or 
+key = 'basepath_logbackup' or key = 'basepath_logvolumes' or key = 'basepath_catalogbackup')"
 global.ini,DEFAULT,,,persistence,basepath_catalogbackup,$(DIR_INSTANCE)/backup/log
 global.ini,DEFAULT,,,persistence,basepath_databackup,$(DIR_INSTANCE)/backup/data
 global.ini,DEFAULT,,,persistence,basepath_datavolumes,$(DIR_GLOBAL)/hdb/data
@@ -1123,7 +1130,9 @@ The default setting for SAP HANA to perform a log backup is 900 seconds (15 minu
 recommended to reduce this to 300 seconds (i.e. 5 minutes).
 
 ```bash
-> hdbsql -jaxC -n <HANA_ip_address>:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> "ALTER SYSTEM ALTER CONFIGURATION ('global.ini', 'SYSTEM') SET ('persistence', 'log_backup_timeout_s') = '300' WITH RECONFIGURE"
+> hdbsql -jaxC -n <HANA_ip_address>:30013 -i 00 -u SYSTEM -p <SYSTEM_USER_PASSWORD> "ALTER 
+SYSTEM ALTER CONFIGURATION ('global.ini', 'SYSTEM') SET ('persistence', 
+'log_backup_timeout_s') = '300' WITH RECONFIGURE"
 ```
 
 ##### Check log backup timeout
@@ -1133,7 +1142,8 @@ In this example, the settings which have just been set will display as the SYSTE
 query also returns the DEFAULT settings for comparison.
 
 ```bash
-> hdbsql -jaxC -n <HANA_ip_address> - i 00 -U SHOASNAP "select * from sys.m_inifile_contents where key like '%log_backup_timeout%' "
+> hdbsql -jaxC -n <HANA_ip_address> - i 00 -U SHOASNAP "select * from sys.m_inifile_contents 
+where key like '%log_backup_timeout%' "
 global.ini,DEFAULT,,,persistence,log_backup_timeout_s,900
 global.ini,SYSTEM,,,persistence,log_backup_timeout_s,300
 ```
@@ -2104,19 +2114,29 @@ system. The standard practice for the snapshot tools is to setup the user's `cro
 
 An example of a `crontab` for the user `shoasnap` to automate snapshots is below.
 
+<font color="red">**CAUTION**</font>
+> <font color="red">Output of `crontab -l` command wrapped at maximum of 80 characters per line.
+</font>
+
 ```bash
 shoasnap@sapprdhdb80:~/bin> crontab -l
 MAILTO=""
 # =============== TEST snapshot schedule ===============
 # __START__ logs snapshot every hour at approximately 5 minute intervals
-06,11,16,21,26,31,36,41,46,51,56 * * * * (. /home/shoasnap/.profile ; cd /home/shoasnap/bin ; ./azure_hana_backup --prefix=logs_TEST --frequency=3min --retention=9 --ssl=openssl --type=logs)
+06,11,16,21,26,31,36,41,46,51,56 * * * * (. /home/shoasnap/.profile ; 
+cd /home/shoasnap/bin ; ./azure_hana_backup --prefix=logs_TEST --frequency=3min
+ --retention=9 --ssl=openssl --type=logs)
 # __END__ logs snapshots
 # __START__ logs snapshot every two hours at 1 minute past the hour.
 # this setting avoids clashing with the 'hana' snapshot.
-01 01,03,05,07,09,11,13,15,17,19,21,23 * * * (. /home/shoasnap/.profile ; cd /home/shoasnap/bin ; ./azure_hana_backup --prefix=logs_TEST --frequency=3min --retention=9 --ssl=openssl --type=logs)
+01 01,03,05,07,09,11,13,15,17,19,21,23 * * * (. /home/shoasnap/.profile ; 
+cd /home/shoasnap/bin ; ./azure_hana_backup --prefix=logs_TEST --frequency=3min
+ --retention=9 --ssl=openssl --type=logs)
 # __END__ logs snapshots
 # __START__ hana snapshot every two hours at 59 minutes past the hour.
-59 00,02,04,06,08,10,12,14,16,18,20,22 * * * (. /home/shoasnap/.profile ; cd /home/shoasnap/bin ; ./azure_hana_backup --type=hana --prefix=hana_TEST --frequency=15min --retention=9 --ssl=openssl)
+59 00,02,04,06,08,10,12,14,16,18,20,22 * * * (. /home/shoasnap/.profile ; 
+cd /home/shoasnap/bin ; ./azure_hana_backup --type=hana --prefix=hana_TEST 
+--frequency=15min --retention=9 --ssl=openssl)
 # __END__ hana snapshot
 #
 ```
@@ -2204,7 +2224,8 @@ In some cases customer's already have tools to protect SAP HANA and only want to
    An example follows for `--boottype=TYPEI` as output by `testStorageSnapshotConnection` command:
 
    ```bash
-   ./azure_hana_backup --type=boot --boottype=TYPEI --prefix=boot_example_text --frequency=3min --retention=7
+   ./azure_hana_backup --type=boot --boottype=TYPEI --prefix=boot_example_text \
+   --frequency=3min --retention=7
    ```
 
 1. Now [setup automatic snapshot backup](#how-to-setup-automatic-snapshot-backup).
