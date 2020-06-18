@@ -332,6 +332,26 @@ are supported by SAP for Storage Snapshot Backups.
 - For DR: The snapshot tools must be tested on DR node before DR is setup.
 - Monitor disk space regularly, automated log deletion is managed with the `--trim` option of the
     `azure_hana_backup tool` for SAP HANA 2 and later releases.
+- **Risk of snapshots not being taken** - The snapshot tools only interact with the node of the SAP HANA 
+system specified in the configuration file.  If this node becomes unavailable there is no mechanism to 
+automatically start communicating with another node.  
+  -	For a **SAP HANA Scale-Out with Standby** scenario it is typical to install and configure the snapshot
+ tools on the master node. But, if the master node becomes unavailable, the standby node will take over 
+the master node role. In this case the implementation team should configure the snapshot tools on both 
+nodes (Master and Stand-By) to avoid any missed snapshots. In the normal state the master node will take 
+HANA snapshots initiated by crontab, but after master node failover those snapshots will have to be 
+executed from another node such as the new master node (former standby). To achieve this the standby 
+node would need the snapshot tool installed, storage communication enabled, hdbuserstore configured, 
+HANABackupCustomerDetails.txt configured, and crontab commands staged in advance of the failover.
+  -	For a **SAP HANA HSR HA** scenario, it is recommended to install, configure, and schedule the 
+snapshot tools on both (Primary and Secondary) nodes. Then, if the Primary node becomes unavailable, 
+the Secondary node will take over with snapshots being taken on the Secondary. In the normal state the 
+Primary node will take HANA snapshots initiated by crontab and the Secondary node would attempt to take 
+snapshots but fail as the Primary is functioning correctly.  But after Primary node failover those 
+snapshots will be executed from the Secondary node. To achieve this the Secondary node needs the 
+snapshot tool installed, storage communication enabled, hdbuserstore configured, HANABackupCustomerDetails.txt 
+configured, and crontab enabled in advance of the failover.
+
 
 <p style="display: none;">\newpage</p>
 
