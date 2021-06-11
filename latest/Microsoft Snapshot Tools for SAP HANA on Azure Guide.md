@@ -11,4 +11,4 @@ AzAcSnap provides a more modern experience to enable DevOps style deployment and
 </p>
 The Microsoft Snapshot Tools Version 4.3 (available on Github) is no longer being actively developed, and might be removed from Github altogether. All of its features are now available in the replacement tool Azure Application Snapshot Tool (aka AzAcSnap), which is available at: https://aka.ms/azacsnap. Please upgrade and leverage AzAcSnap for all of your needs there.
 </p>
-<a href="https://aka.ms/azacsnap">Azure Application Consistent Snapshot Tool Version <b>5.0</b></a> <small>(Released 21/April/2021)</small>
+<a href="https://docs.microsoft.com/en-us/azure/azure-netapp-files/azacsnap-release-notes#azacsnap-v50-build-202104216349---ga-released-21-april-2021">Azure Application Consistent Snapshot Tool Version <b>5.0</b></a> <small>(Released 21/April/2021)</small>
